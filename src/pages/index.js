@@ -17,15 +17,18 @@ export default function Home() {
   }, []);
 
   const handleSubmit = async (text) => {
-    // Mock parsing - creates a stock asset from input
-    // TODO: Replace with LLM parsing
-    const asset = {
-      type: 'acao',
-      ticker: text.toUpperCase().slice(0, 5),
-      quantity: 100,
-      avgPrice: 35,
-    };
+    const res = await fetch('/api/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
 
+    if (!res.ok) {
+      console.error('Failed to parse asset');
+      return;
+    }
+
+    const asset = await res.json();
     const id = await addAsset(asset);
     setAssets([...assets, { ...asset, id }]);
   };
