@@ -78,6 +78,11 @@ export default async function handler(req, res) {
 
     const asset = JSON.parse(response.text);
 
+    // Default buyDate to today if not provided
+    if (!asset.buyDate) {
+      asset.buyDate = new Date().toISOString().split('T')[0];
+    }
+
     res.status(200).json(asset);
   } catch (error) {
     console.error("Gemini API error:", error);

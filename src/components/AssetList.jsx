@@ -1,4 +1,4 @@
-export default function AssetList({ assets, onDelete }) {
+export default function AssetList({ assets, assetValues = {}, onDelete }) {
   if (assets.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-zinc-400">
@@ -7,11 +7,32 @@ export default function AssetList({ assets, onDelete }) {
     );
   }
 
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+  };
+
   const formatAsset = (asset) => {
+    const date = formatDate(asset.buyDate);
+    const dateSuffix = date ? ` (${date})` : '';
+
     if (asset.type === 'acao' || asset.type === 'etf') {
-      return `${asset.ticker}: ${asset.quantity} @ R$${asset.avgPrice}`;
+      return `${asset.ticker}: ${asset.quantity} @ R$${asset.avgPrice}${dateSuffix}`;
     }
-    return `${asset.type.toUpperCase()} ${asset.bank}: R$${asset.amount}`;
+    return `${asset.type.toUpperCase()} ${asset.bank}: R$${asset.amount}${dateSuffix}`;
+  };
+
+  const formatProfit = (value) => {
+    if (value === undefined || value === null) return null;
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value.toFixed(2)}%`;
   };
 
   return (
@@ -21,9 +42,19 @@ export default function AssetList({ assets, onDelete }) {
           key={asset.id}
           className="flex items-center justify-between p-3 border-2"
         >
-          <span className="">
-            {formatAsset(asset)}
-          </span>
+          <div className="flex-1">
+            <span>{formatAsset(asset)}</span>
+            {assetValues[asset.id] && (
+              <div className="flex gap-4 text-sm mt-1">
+                <span className="text-zinc-400">
+                  {formatCurrency(assetValues[asset.id].currentValue)}
+                </span>
+                <span className={assetValues[asset.id].profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}>
+                  {formatProfit(assetValues[asset.id].profitPercent)}
+                </span>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => onDelete(asset.id)}
             className="hover:text-red-500 transition-colors"

@@ -3,6 +3,8 @@ import { Geist } from 'next/font/google';
 import { getAllAssets, addAsset, deleteAsset } from '@/lib/db';
 import AssetList from '@/components/AssetList';
 import ChatInput from '@/components/ChatInput';
+import PortfolioSummary from '@/components/PortfolioSummary';
+import { usePortfolioValue } from '@/hooks/usePortfolioValue';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -11,6 +13,7 @@ const geistSans = Geist({
 
 export default function Home() {
   const [assets, setAssets] = useState([]);
+  const { totalValue, profit, profitPercent, assetValues, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
     getAllAssets().then(setAssets);
@@ -49,7 +52,15 @@ export default function Home() {
           </h1>
         </header>
 
-        <AssetList assets={assets} onDelete={handleDelete} />
+        <PortfolioSummary
+          totalValue={totalValue}
+          profit={profit}
+          profitPercent={profitPercent}
+          isLoading={isLoading}
+          error={error}
+        />
+
+        <AssetList assets={assets} assetValues={assetValues} onDelete={handleDelete} />
 
         <div className="mt-4">
           <ChatInput onSubmit={handleSubmit} />
