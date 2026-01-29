@@ -18,11 +18,11 @@ export default function ChatInput({ onSubmit }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Ex: 100 PETR4 a R$35"
-        className="flex-1 px-4 py-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-700"
+        className="flex-1 px-4 py-3 bg-zinc-100 bg-zinc-900 text-zinc-200 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-zinc-300 focus:ring-zinc-700"
       />
       <button
         type="submit"
-        className="px-4 py-3 rounded-lg bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+        className="px-4 py-3 bg-zinc-800 bg-zinc-200 text-white text-zinc-900 hover:bg-zinc-700 hover:bg-zinc-300 transition-colors"
         aria-label="Enviar"
       >
         <svg

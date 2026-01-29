@@ -19,14 +19,14 @@ export default function AssetList({ assets, onDelete }) {
       {assets.map((asset) => (
         <li
           key={asset.id}
-          className="flex items-center justify-between p-3 rounded-lg bg-zinc-100 dark:bg-zinc-900"
+          className="flex items-center justify-between p-3 border-2"
         >
-          <span className="text-zinc-800 dark:text-zinc-200">
+          <span className="">
             {formatAsset(asset)}
           </span>
           <button
             onClick={() => onDelete(asset.id)}
-            className="text-zinc-400 hover:text-red-500 transition-colors"
+            className="hover:text-red-500 transition-colors"
             aria-label="Excluir"
           >
             <svg

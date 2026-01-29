@@ -23,3 +23,7 @@ This is a Next.js 16 project using the **Pages Router** pattern (not App Router)
 **Path aliasing:** Use `@/` prefix for imports from `src/` (e.g., `import '@/styles/globals.css'`)
 
 **Stack:** Next.js 16, React 19, Tailwind CSS 4, PostCSS
+
+## Project
+
+Investment tracker with a focus on brazillian assets.

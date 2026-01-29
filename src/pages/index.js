@@ -40,11 +40,11 @@ export default function Home() {
 
   return (
     <div
-      className={`${geistSans.className} flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black`}
+      className={`${geistSans.className} flex min-h-screen items-center justify-center bg-black`}
     >
-      <main className="flex h-screen w-full max-w-3xl flex-col bg-white dark:bg-black py-8 px-6">
+      <main className="flex h-screen w-full max-w-3xl flex-col bg-black py-8 px-6">
         <header className="mb-6">
-          <h1 className="text-2xl font-semibold text-zinc-800 dark:text-zinc-100">
+          <h1 className="text-2xl font-semibold text-zinc-100">
             Folio
           </h1>
         </header>
