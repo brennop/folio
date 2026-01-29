@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Geist } from 'next/font/google';
-import { getAllAssets, addAsset, deleteAsset } from '@/lib/db';
+import { getAllAssets, addAsset, deleteAsset, updateAsset } from '@/lib/db';
 import AssetList from '@/components/AssetList';
+import EditAssetModal from '@/components/EditAssetModal';
 import ChatInput from '@/components/ChatInput';
 import PortfolioSummary from '@/components/PortfolioSummary';
 import { usePortfolioValue } from '@/hooks/usePortfolioValue';
@@ -13,6 +14,7 @@ const geistSans = Geist({
 
 export default function Home() {
   const [assets, setAssets] = useState([]);
+  const [editingAsset, setEditingAsset] = useState(null);
   const { totalValue, profit, profitPercent, assetValues, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
@@ -41,6 +43,16 @@ export default function Home() {
     setAssets(assets.filter((a) => a.id !== id));
   };
 
+  const handleEdit = (asset) => {
+    setEditingAsset(asset);
+  };
+
+  const handleSave = async (updatedAsset) => {
+    await updateAsset(updatedAsset);
+    setAssets(assets.map((a) => (a.id === updatedAsset.id ? updatedAsset : a)));
+    setEditingAsset(null);
+  };
+
   return (
     <div
       className={`${geistSans.className} flex min-h-screen items-center justify-center bg-black`}
@@ -60,11 +72,19 @@ export default function Home() {
           error={error}
         />
 
-        <AssetList assets={assets} assetValues={assetValues} onDelete={handleDelete} />
+        <AssetList assets={assets} assetValues={assetValues} onDelete={handleDelete} onEdit={handleEdit} />
 
         <div className="mt-4">
           <ChatInput onSubmit={handleSubmit} />
         </div>
+
+        {editingAsset && (
+          <EditAssetModal
+            asset={editingAsset}
+            onSave={handleSave}
+            onCancel={() => setEditingAsset(null)}
+          />
+        )}
       </main>
     </div>
   );

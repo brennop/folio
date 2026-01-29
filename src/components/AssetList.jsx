@@ -1,4 +1,4 @@
-export default function AssetList({ assets, assetValues = {}, onDelete }) {
+export default function AssetList({ assets, assetValues = {}, onDelete, onEdit }) {
   if (assets.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-zinc-400">
@@ -61,27 +61,49 @@ export default function AssetList({ assets, assetValues = {}, onDelete }) {
               </div>
             )}
           </div>
-          <button
-            onClick={() => onDelete(asset.id)}
-            className="hover:text-red-500 transition-colors"
-            aria-label="Excluir"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex gap-2">
+            <button
+              onClick={() => onEdit(asset)}
+              className="hover:text-blue-400 transition-colors"
+              aria-label="Editar"
             >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            </button>
+            <button
+              onClick={() => onDelete(asset.id)}
+              className="hover:text-red-500 transition-colors"
+              aria-label="Excluir"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
         </li>
       ))}
     </ul>

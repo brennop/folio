@@ -53,3 +53,15 @@ export async function deleteAsset(id) {
     request.onsuccess = () => resolve();
   });
 }
+
+export async function updateAsset(asset) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.put(asset);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
