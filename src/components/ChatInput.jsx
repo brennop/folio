@@ -25,20 +25,7 @@ export default function ChatInput({ onSubmit }) {
         className="px-4 py-3 bg-zinc-800 bg-zinc-200 text-white text-zinc-900 hover:bg-zinc-700 hover:bg-zinc-300 transition-colors"
         aria-label="Enviar"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="m5 12 7-7 7 7" />
-          <path d="M12 19V5" />
-        </svg>
+        ↑
       </button>
     </form>
   );

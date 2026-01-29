@@ -1,4 +1,8 @@
+import { useState } from 'react';
+
 export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, isLoading, error }) {
+  const [isHidden, setIsHidden] = useState(false);
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -25,12 +29,17 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
     <div className="mb-6 p-4 border-2 border-zinc-800">
       <div className="flex items-baseline justify-between">
         <div>
-          <p className="text-zinc-500 text-sm mb-1">Patrimônio total</p>
+          <div className="flex items-center gap-2">
+            <p className="text-zinc-500 text-sm mb-1">Patrimônio total</p>
+            <button onClick={() => setIsHidden(!isHidden)} className="text-zinc-500 hover:text-zinc-300 mb-1 text-sm">
+              {isHidden ? '⌾' : '⍉'}
+            </button>
+          </div>
           {isLoading ? (
             <div className="h-8 w-32 bg-zinc-800 animate-pulse" />
           ) : (
             <p className="text-3xl font-semibold text-zinc-100">
-              {formatCurrency(totalValue)}
+              {isHidden ? 'R$ *****' : formatCurrency(totalValue)}
             </p>
           )}
         </div>
@@ -41,7 +50,7 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
             <div className="h-6 w-24 bg-zinc-800 animate-pulse" />
           ) : (
             <p className={`text-xl font-medium ${profitColor}`}>
-              {formatCurrency(profit)} ({formatPercent(profitPercent)})
+              {isHidden ? `***** (${formatPercent(profitPercent)})` : `${formatCurrency(profit)} (${formatPercent(profitPercent)})`}
             </p>
           )}
         </div>

@@ -56,7 +56,7 @@ export default function AssetList({ assets, assetValues = {}, onDelete, onEdit }
       {assets.map((asset) => (
         <li
           key={asset.id}
-          className="flex items-center justify-between p-3 border-2"
+          className="flex items-center justify-between p-3 border-1 border-zinc-600"
         >
           <div className="flex-1">
             <span>{formatAsset(asset)}</span>
@@ -77,41 +77,14 @@ export default function AssetList({ assets, assetValues = {}, onDelete, onEdit }
               className="hover:text-blue-400 transition-colors"
               aria-label="Editar"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
+              ✎
             </button>
             <button
               onClick={() => onDelete(asset.id)}
               className="hover:text-red-500 transition-colors"
               aria-label="Excluir"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
+              ×
             </button>
           </div>
         </li>
