@@ -32,6 +32,16 @@ export default function AssetList({ assets, assetValues = {}, onDelete, onEdit }
         : `${asset.rate}% CDI`;
       return `${asset.type.toUpperCase()} ${asset.bank}: R$${asset.amount} ${rateDisplay}${dateSuffix}`;
     }
+    if (asset.type?.startsWith('tesouro_')) {
+      const typeLabels = {
+        tesouro_selic: 'Tesouro Selic',
+        tesouro_ipca: 'Tesouro IPCA+',
+        tesouro_prefixado: 'Tesouro Prefixado',
+      };
+      const label = typeLabels[asset.type] || asset.type.toUpperCase();
+      const rateDisplay = asset.rate ? ` ${asset.rate}%` : '';
+      return `${label}${rateDisplay}: R$${asset.amount}${dateSuffix}`;
+    }
     return `${asset.type.toUpperCase()} ${asset.bank}: R$${asset.amount}${dateSuffix}`;
   };
 

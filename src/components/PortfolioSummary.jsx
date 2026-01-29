@@ -1,4 +1,4 @@
-export default function PortfolioSummary({ totalValue, profit, profitPercent, isLoading, error }) {
+export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, isLoading, error }) {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -46,6 +46,35 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, is
           )}
         </div>
       </div>
+
+      {totalValue > 0 && (
+        <div className="mt-4">
+          <div className="h-3 w-full bg-zinc-800 overflow-hidden flex">
+            {rendaVariavelTotal > 0 && (
+              <div
+                className="bg-blue-500 h-full"
+                style={{ width: `${(rendaVariavelTotal / totalValue) * 100}%` }}
+              />
+            )}
+            {rendaFixaTotal > 0 && (
+              <div
+                className="bg-emerald-500 h-full"
+                style={{ width: `${(rendaFixaTotal / totalValue) * 100}%` }}
+              />
+            )}
+          </div>
+          <div className="flex justify-between mt-2 text-xs text-zinc-400">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              Variável {((rendaVariavelTotal / totalValue) * 100).toFixed(1)}%
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Fixa {((rendaFixaTotal / totalValue) * 100).toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

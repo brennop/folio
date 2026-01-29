@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Geist } from 'next/font/google';
+import { Geist_Mono } from 'next/font/google';
 import { getAllAssets, addAsset, deleteAsset, updateAsset } from '@/lib/db';
 import AssetList from '@/components/AssetList';
 import EditAssetModal from '@/components/EditAssetModal';
@@ -7,15 +7,15 @@ import ChatInput from '@/components/ChatInput';
 import PortfolioSummary from '@/components/PortfolioSummary';
 import { usePortfolioValue } from '@/hooks/usePortfolioValue';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
   subsets: ['latin'],
 });
 
 export default function Home() {
   const [assets, setAssets] = useState([]);
   const [editingAsset, setEditingAsset] = useState(null);
-  const { totalValue, profit, profitPercent, assetValues, isLoading, error } = usePortfolioValue(assets);
+  const { totalValue, profit, profitPercent, assetValues, rendaFixaTotal, rendaVariavelTotal, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
     getAllAssets().then(setAssets);
@@ -53,21 +53,56 @@ export default function Home() {
     setEditingAsset(null);
   };
 
+  const handleDownload = () => {
+    const json = JSON.stringify(assets, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'folio-assets.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div
-      className={`${geistSans.className} flex min-h-screen items-center justify-center bg-black`}
+      className={`${geistMono.className} flex min-h-screen items-center justify-center bg-black`}
     >
       <main className="flex h-screen w-full max-w-3xl flex-col bg-black py-8 px-6">
-        <header className="mb-6">
+        <header className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-zinc-100">
             Folio
           </h1>
+          <button
+            onClick={handleDownload}
+            className="text-zinc-400 hover:text-zinc-100 transition-colors"
+            aria-label="Baixar JSON"
+            title="Baixar JSON"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
         </header>
 
         <PortfolioSummary
           totalValue={totalValue}
           profit={profit}
           profitPercent={profitPercent}
+          rendaFixaTotal={rendaFixaTotal}
+          rendaVariavelTotal={rendaVariavelTotal}
           isLoading={isLoading}
           error={error}
         />

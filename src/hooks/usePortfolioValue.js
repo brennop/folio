@@ -14,6 +14,8 @@ export function usePortfolioValue(assets) {
     profit: 0,
     profitPercent: 0,
     assetValues: {},
+    rendaFixaTotal: 0,
+    rendaVariavelTotal: 0,
     isLoading: true,
     error: null,
   });
@@ -26,6 +28,8 @@ export function usePortfolioValue(assets) {
         profit: 0,
         profitPercent: 0,
         assetValues: {},
+        rendaFixaTotal: 0,
+        rendaVariavelTotal: 0,
         isLoading: false,
         error: null,
       });
@@ -56,7 +60,12 @@ export function usePortfolioValue(assets) {
 
       let totalValue = 0;
       let totalInvested = 0;
+      let rendaFixaTotal = 0;
+      let rendaVariavelTotal = 0;
       const assetValues = {};
+
+      const rendaVariavelTypes = ['acao', 'etf'];
+      const rendaFixaTypes = ['cdb', 'lci', 'lca', 'tesouro_selic', 'tesouro_ipca', 'tesouro_prefixado'];
 
       for (const asset of assets) {
         let result;
@@ -139,8 +148,15 @@ export function usePortfolioValue(assets) {
           invested,
         };
 
-        totalValue += result.currentValue || 0;
+        const currentValue = result.currentValue || 0;
+        totalValue += currentValue;
         totalInvested += invested;
+
+        if (rendaVariavelTypes.includes(asset.type)) {
+          rendaVariavelTotal += currentValue;
+        } else if (rendaFixaTypes.includes(asset.type)) {
+          rendaFixaTotal += currentValue;
+        }
       }
 
       const profit = totalValue - totalInvested;
@@ -152,6 +168,8 @@ export function usePortfolioValue(assets) {
         profit,
         profitPercent,
         assetValues,
+        rendaFixaTotal,
+        rendaVariavelTotal,
         isLoading: false,
         error: null,
       });

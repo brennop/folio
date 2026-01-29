@@ -23,14 +23,16 @@ export default function EditAssetModal({ asset, onSave, onCancel }) {
       cdb: 'CDB',
       lci: 'LCI',
       lca: 'LCA',
-      tesouro: 'Tesouro',
+      tesouro_selic: 'Tesouro Selic',
+      tesouro_ipca: 'Tesouro IPCA+',
+      tesouro_prefixado: 'Tesouro Prefixado',
     };
     return labels[type] || type.toUpperCase();
   };
 
   const isStock = asset.type === 'acao' || asset.type === 'etf';
   const isFixedIncome = asset.type === 'cdb' || asset.type === 'lci' || asset.type === 'lca';
-  const isTesouro = asset.type === 'tesouro';
+  const isTesouro = asset.type?.startsWith('tesouro_');
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
