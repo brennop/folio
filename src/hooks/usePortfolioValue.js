@@ -83,13 +83,17 @@ export function usePortfolioValue(assets) {
           }
 
           case 'cdb':
-            result = calculateCdiLinked(
-              asset.amount,
-              asset.buyDate,
-              asset.rate,
-              indices.cdi.annual,
-              false
-            );
+            if (asset.rateType === 'prefixado') {
+              result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
+            } else {
+              result = calculateCdiLinked(
+                asset.amount,
+                asset.buyDate,
+                asset.rate,
+                indices.cdi.annual,
+                false
+              );
+            }
             invested = asset.amount;
             break;
 

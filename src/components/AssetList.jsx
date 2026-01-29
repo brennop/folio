@@ -26,6 +26,12 @@ export default function AssetList({ assets, assetValues = {}, onDelete }) {
     if (asset.type === 'acao' || asset.type === 'etf') {
       return `${asset.ticker}: ${asset.quantity} @ R$${asset.avgPrice}${dateSuffix}`;
     }
+    if (asset.type === 'cdb' || asset.type === 'lci' || asset.type === 'lca') {
+      const rateDisplay = asset.rateType === 'prefixado'
+        ? `${asset.rate}% a.a.`
+        : `${asset.rate}% CDI`;
+      return `${asset.type.toUpperCase()} ${asset.bank}: R$${asset.amount} ${rateDisplay}${dateSuffix}`;
+    }
     return `${asset.type.toUpperCase()} ${asset.bank}: R$${asset.amount}${dateSuffix}`;
   };
 
