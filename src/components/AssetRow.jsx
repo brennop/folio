@@ -4,12 +4,12 @@ import Tooltip from "@/components/Tooltip";
 const palette = {
   'acao': 'bg-pink-400',
   'etf': 'bg-fuchsia-400',
-  'cdb': 'bg-emerald-500',
-  'lci': 'bg-green-500',
-  'lca': 'bg-lime-600',
-  'tesouro_selic': 'bg-yellow-600',
-  'tesouro_ipca': 'bg-amber-500',
-  'tesouro_prefixado': 'bg-orange-500',
+  'cdb': 'bg-emerald-400',
+  'lci': 'bg-green-400',
+  'lca': 'bg-lime-400',
+  'tesouro_selic': 'bg-yellow-400',
+  'tesouro_ipca': 'bg-amber-400',
+  'tesouro_prefixado': 'bg-orange-400',
 }
 
 export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete }) {

@@ -48,7 +48,7 @@ export default function Tooltip({ children, content }) {
             ref={refs.setFloating}
             style={floatingStyles}
             {...getFloatingProps()}
-            className={`bg-zinc-800 text-zinc-200 text-sm z-50 ${geistMono.className}`}
+            className={`bg-zinc-200 text-zinc-800 text-sm z-50 ${geistMono.className}`}
           >
             {content}
           </div>
