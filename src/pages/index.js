@@ -68,7 +68,7 @@ export default function Home() {
     <div
       className={`${geistMono.className} flex min-h-screen items-center justify-center bg-black`}
     >
-      <main className="flex h-screen w-full max-w-3xl flex-col bg-black py-8 px-6">
+      <main className="flex h-screen w-full max-w-4xl flex-col bg-black py-8 px-6">
         <header className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-zinc-100">
             Folio

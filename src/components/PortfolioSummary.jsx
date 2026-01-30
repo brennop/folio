@@ -1,19 +1,8 @@
 import { useState } from 'react';
+import { formatCurrency, formatPercent } from '@/lib/format';
 
 export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error }) {
   const [isHidden, setIsHidden] = useState(false);
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatPercent = (value) => {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  };
 
   if (error) {
     return (
