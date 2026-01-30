@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export default function Home() {
   const [assets, setAssets] = useState([]);
   const [editingAsset, setEditingAsset] = useState(null);
-  const { totalValue, profit, profitPercent, assetValues, rendaFixaTotal, rendaVariavelTotal, isLoading, error } = usePortfolioValue(assets);
+  const { totalValue, profit, profitPercent, assetValues, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
     getAllAssets().then(setAssets);
@@ -89,6 +89,7 @@ export default function Home() {
           profitPercent={profitPercent}
           rendaFixaTotal={rendaFixaTotal}
           rendaVariavelTotal={rendaVariavelTotal}
+          investedThisYear={investedThisYear}
           isLoading={isLoading}
           error={error}
         />

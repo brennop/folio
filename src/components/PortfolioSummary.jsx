@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, isLoading, error }) {
+export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error }) {
   const [isHidden, setIsHidden] = useState(false);
 
   const formatCurrency = (value) => {
@@ -40,6 +40,11 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
           ) : (
             <p className="text-3xl font-semibold text-zinc-100">
               {isHidden ? 'R$ *****' : formatCurrency(totalValue)}
+            </p>
+          )}
+          {investedThisYear > 0 && !isLoading && (
+            <p className="text-zinc-500 text-sm mt-1">
+              {isHidden ? 'R$ *****' : formatCurrency(investedThisYear)} em {new Date().getFullYear()}
             </p>
           )}
         </div>

@@ -56,7 +56,7 @@ export default function AssetList({ assets, assetValues = {}, onDelete, onEdit }
       {assets.map((asset) => (
         <li
           key={asset.id}
-          className="flex items-center justify-between p-3 border-1 border-zinc-600"
+          className="flex items-center justify-between p-3 border-1 border-zinc-700"
         >
           <div className="flex-1">
             <span>{formatAsset(asset)}</span>

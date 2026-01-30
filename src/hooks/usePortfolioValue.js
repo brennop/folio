@@ -16,6 +16,7 @@ export function usePortfolioValue(assets) {
     assetValues: {},
     rendaFixaTotal: 0,
     rendaVariavelTotal: 0,
+    investedThisYear: 0,
     isLoading: true,
     error: null,
   });
@@ -30,6 +31,7 @@ export function usePortfolioValue(assets) {
         assetValues: {},
         rendaFixaTotal: 0,
         rendaVariavelTotal: 0,
+        investedThisYear: 0,
         isLoading: false,
         error: null,
       });
@@ -62,6 +64,8 @@ export function usePortfolioValue(assets) {
       let totalInvested = 0;
       let rendaFixaTotal = 0;
       let rendaVariavelTotal = 0;
+      let investedThisYear = 0;
+      const currentYear = new Date().getFullYear();
       const assetValues = {};
 
       const rendaVariavelTypes = ['acao', 'etf'];
@@ -157,6 +161,13 @@ export function usePortfolioValue(assets) {
         } else if (rendaFixaTypes.includes(asset.type)) {
           rendaFixaTotal += currentValue;
         }
+
+        if (asset.buyDate) {
+          const buyYear = new Date(asset.buyDate).getFullYear();
+          if (buyYear === currentYear) {
+            investedThisYear += invested;
+          }
+        }
       }
 
       const profit = totalValue - totalInvested;
@@ -170,6 +181,7 @@ export function usePortfolioValue(assets) {
         assetValues,
         rendaFixaTotal,
         rendaVariavelTotal,
+        investedThisYear,
         isLoading: false,
         error: null,
       });
