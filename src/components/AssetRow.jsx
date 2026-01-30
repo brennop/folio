@@ -1,8 +1,9 @@
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import Tooltip from "@/components/Tooltip";
 
 const palette = {
-  'acao': 'bg-pink-500',
-  'etf': 'bg-fuchsia-500',
+  'acao': 'bg-pink-400',
+  'etf': 'bg-fuchsia-400',
   'cdb': 'bg-emerald-500',
   'lci': 'bg-green-500',
   'lca': 'bg-lime-600',
@@ -11,17 +12,13 @@ const palette = {
   'tesouro_prefixado': 'bg-orange-500',
 }
 
-export default function AssetRow({ asset, assetValue, onEdit, onDelete }) {
+export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete }) {
   const formatName = (asset) => {
     if (asset.type === "acao" || asset.type === "etf") {
       return asset.ticker;
     }
     if (asset.type === "cdb" || asset.type === "lci" || asset.type === "lca") {
-      const rateDisplay =
-        asset.rateType === "prefixado"
-          ? `${asset.rate}% a.a.`
-          : `${asset.rate}% CDI`;
-      return `${asset.type.toUpperCase()} ${asset.bank} ${rateDisplay}`;
+      return `${asset.type.toUpperCase()} ${asset.bank}`;
     }
     if (asset.type?.startsWith("tesouro_")) {
       const typeLabels = {
@@ -29,11 +26,48 @@ export default function AssetRow({ asset, assetValue, onEdit, onDelete }) {
         tesouro_ipca: "Tesouro IPCA+",
         tesouro_prefixado: "Tesouro Prefixado",
       };
-      const label = typeLabels[asset.type] || asset.type.toUpperCase();
-      const rateDisplay = asset.rate ? ` ${asset.rate}%` : "";
-      return `${label}${rateDisplay}`;
+      return typeLabels[asset.type] || asset.type.toUpperCase();
     }
     return `${asset.type.toUpperCase()} ${asset.bank}`;
+  };
+
+  const getNameTooltipContent = () => {
+    if (asset.type === "acao" || asset.type === "etf") {
+      if (assetValue?.pricePerShare != null) {
+        const changeDisplay = assetValue.dailyChange != null
+          ? ` (${assetValue.dailyChange >= 0 ? "+" : ""}${assetValue.dailyChange.toFixed(2)}%)`
+          : "";
+        return `${formatCurrency(assetValue.pricePerShare)}${changeDisplay}`;
+      }
+      return null;
+    }
+
+    if (asset.type === "cdb" || asset.type === "lci" || asset.type === "lca") {
+      const rate = asset.rateType === "prefixado"
+        ? `${asset.rate}% a.a.`
+        : `${asset.rate}% CDI`;
+      if (asset.rateType !== "prefixado") {
+        const cdiRate = indices?.cdi?.annual;
+        return cdiRate ? `${rate} (CDI: ${cdiRate.toFixed(2)}%)` : rate;
+      }
+      return rate;
+    }
+
+    if (asset.type === "tesouro_selic") {
+      const selicRate = indices?.selic;
+      return selicRate ? `SELIC: ${selicRate.toFixed(2)}%` : "SELIC";
+    }
+
+    if (asset.type === "tesouro_ipca") {
+      const ipcaRate = indices?.ipca;
+      return ipcaRate ? `IPCA: ${ipcaRate.toFixed(2)}% + ${asset.rate || 6}%` : `IPCA + ${asset.rate || 6}%`;
+    }
+
+    if (asset.type === "tesouro_prefixado") {
+      return `${asset.rate}% a.a.`;
+    }
+
+    return null;
   };
 
   const formatValue = (asset) => {
@@ -47,9 +81,17 @@ export default function AssetRow({ asset, assetValue, onEdit, onDelete }) {
     <tr className="text-zinc-400 text-sm">
       <td className="text-zinc-500">{formatDate(asset.buyDate)}</td>
       <td className="">
-        <span className={`${palette[asset.type]} text-black h-full`}>
-          {formatName(asset)}
-        </span>
+        {getNameTooltipContent() ? (
+          <Tooltip content={getNameTooltipContent()}>
+            <span className={`${palette[asset.type]} text-black h-full cursor-default`}>
+              {formatName(asset)}
+            </span>
+          </Tooltip>
+        ) : (
+          <span className={`${palette[asset.type]} text-black h-full`}>
+            {formatName(asset)}
+          </span>
+        )}
       </td>
       <td className="">{formatValue(asset)}</td>
       <td className="">
@@ -64,7 +106,7 @@ export default function AssetRow({ asset, assetValue, onEdit, onDelete }) {
         </span>
       </td>
       <td className="">
-        {asset.maturityDate ? formatDate(asset.maturityDate) : "-"}
+        {asset.maturityDate && asset.type != 'acao' && asset.type != 'etf' ? formatDate(asset.maturityDate) : "-"}
       </td>
       <td className="">
         <button

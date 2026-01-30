@@ -3,6 +3,7 @@ import AssetRow from "@/components/AssetRow";
 export default function AssetList({
   assets,
   assetValues = {},
+  indices,
   onDelete,
   onEdit,
 }) {
@@ -35,6 +36,7 @@ export default function AssetList({
               key={asset.id}
               asset={asset}
               assetValue={assetValues[asset.id]}
+              indices={indices}
               onEdit={onEdit}
               onDelete={onDelete}
             />

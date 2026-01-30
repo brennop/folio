@@ -17,6 +17,7 @@ export function usePortfolioValue(assets) {
     rendaFixaTotal: 0,
     rendaVariavelTotal: 0,
     investedThisYear: 0,
+    indices: null,
     isLoading: true,
     error: null,
   });
@@ -32,6 +33,7 @@ export function usePortfolioValue(assets) {
         rendaFixaTotal: 0,
         rendaVariavelTotal: 0,
         investedThisYear: 0,
+        indices: null,
         isLoading: false,
         error: null,
       });
@@ -80,7 +82,11 @@ export function usePortfolioValue(assets) {
           case 'etf': {
             const quote = quotes[asset.ticker];
             if (quote && !quote.error) {
-              result = calculateEquity(asset.quantity, asset.avgPrice, quote.price);
+              result = {
+                ...calculateEquity(asset.quantity, asset.avgPrice, quote.price),
+                dailyChange: quote.change ?? null,
+                pricePerShare: quote.price,
+              };
               invested = asset.quantity * asset.avgPrice;
             } else {
               // Fallback to average price if quote unavailable
@@ -89,6 +95,8 @@ export function usePortfolioValue(assets) {
                 invested: asset.quantity * asset.avgPrice,
                 profit: 0,
                 profitPercent: 0,
+                dailyChange: null,
+                pricePerShare: null,
               };
               invested = asset.quantity * asset.avgPrice;
             }
@@ -182,6 +190,7 @@ export function usePortfolioValue(assets) {
         rendaFixaTotal,
         rendaVariavelTotal,
         investedThisYear,
+        indices,
         isLoading: false,
         error: null,
       });
