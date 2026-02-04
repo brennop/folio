@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatCurrency, formatPercent } from '@/lib/format';
+import AnimatedNumber from './AnimatedNumber';
 
 export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error }) {
   const [isHidden, setIsHidden] = useState(false);
@@ -28,12 +29,12 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
             <div className="h-8 w-32 bg-zinc-800 animate-pulse" />
           ) : (
             <p className="text-3xl font-semibold text-zinc-100">
-              {isHidden ? 'R$ *****' : formatCurrency(totalValue)}
+              <AnimatedNumber value={totalValue} hidden={isHidden} />
             </p>
           )}
           {investedThisYear > 0 && !isLoading && (
             <p className="text-zinc-500 text-sm mt-1">
-              {isHidden ? 'R$ *****' : formatCurrency(investedThisYear)} em {new Date().getFullYear()}
+              {isHidden ? 'R$ *****' : <AnimatedNumber value={investedThisYear} />} em {new Date().getFullYear()}
             </p>
           )}
         </div>
