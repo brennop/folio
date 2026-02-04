@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Geist_Mono } from 'next/font/google';
 import { getAllAssets, addAsset, deleteAsset, updateAsset } from '@/lib/db';
 import AssetList from '@/components/AssetList';
@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export default function Home() {
   const [assets, setAssets] = useState([]);
   const [editingAsset, setEditingAsset] = useState(null);
+  const fileInputRef = useRef(null);
   const { totalValue, profit, profitPercent, assetValues, rendaFixaTotal, rendaVariavelTotal, investedThisYear, indices, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
@@ -64,6 +65,23 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const imported = JSON.parse(text);
+
+    for (const asset of imported) {
+      const { id, ...rest } = asset;
+      await addAsset(rest);
+    }
+
+    const updated = await getAllAssets();
+    setAssets(updated);
+    e.target.value = '';
+  };
+
   return (
     <div
       className={`${geistMono.className} flex min-h-screen items-center justify-center bg-black`}
@@ -73,14 +91,31 @@ export default function Home() {
           <h1 className="text-2xl font-semibold text-zinc-100">
             Folio
           </h1>
-          <button
-            onClick={handleDownload}
-            className="text-zinc-400 hover:text-zinc-100 transition-colors"
-            aria-label="Baixar JSON"
-            title="Baixar JSON"
-          >
-            ↓
-          </button>
+          <div className="flex gap-2">
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              ref={fileInputRef}
+              hidden
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-zinc-400 hover:text-zinc-100 transition-colors"
+              aria-label="Importar JSON"
+              title="Importar JSON"
+            >
+              ↑
+            </button>
+            <button
+              onClick={handleDownload}
+              className="text-zinc-400 hover:text-zinc-100 transition-colors"
+              aria-label="Baixar JSON"
+              title="Baixar JSON"
+            >
+              ↓
+            </button>
+          </div>
         </header>
 
         <PortfolioSummary
