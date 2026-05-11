@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Geist_Mono } from 'next/font/google';
 import { getAllAssets, addAsset, deleteAsset, updateAsset } from '@/lib/db';
 import AssetList from '@/components/AssetList';
@@ -91,7 +92,13 @@ export default function Home() {
           <h1 className="text-2xl font-semibold text-zinc-100">
             Folio
           </h1>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/stocks"
+              className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              Ações
+            </Link>
             <input
               type="file"
               accept=".json"
