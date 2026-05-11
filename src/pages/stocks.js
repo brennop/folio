@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Geist_Mono } from "next/font/google";
-import { getAllAssets } from "@/lib/db";
+import {
+  deleteStockTarget,
+  getAllAssets,
+  getAllStockTargets,
+  upsertStockTarget,
+} from "@/lib/db";
 import { calculateStockRebalance } from "@/lib/rebalance";
 import { formatCurrency } from "@/lib/format";
 import { usePortfolioValue } from "@/hooks/usePortfolioValue";
@@ -17,30 +22,55 @@ function formatPercentValue(value) {
 
 export default function StocksPage() {
   const [assets, setAssets] = useState([]);
+  const [stockTargets, setStockTargets] = useState({});
   const [contribution, setContribution] = useState("");
   const [companyCount, setCompanyCount] = useState("");
   const { assetValues, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
-    getAllAssets().then(setAssets);
+    Promise.all([getAllAssets(), getAllStockTargets()]).then(([nextAssets, targets]) => {
+      setAssets(nextAssets);
+      setStockTargets(
+        Object.fromEntries(
+          targets.map((target) => [target.ticker, String(target.targetPercentage)])
+        )
+      );
+    });
   }, []);
 
   const stockRows = useMemo(() => {
-    return assets
+    const rowsByTicker = assets
       .filter((asset) => asset.type === "acao")
-      .map((asset) => {
+      .reduce((rows, asset) => {
+        const ticker = String(asset.ticker || "").toUpperCase();
+        if (!ticker) return rows;
+
         const value = assetValues[asset.id];
-        return {
-          id: asset.id,
-          ticker: asset.ticker,
-          quantity: Number(asset.quantity) || 0,
-          currentValue: Number(value?.currentValue) || 0,
-          pricePerShare: value?.pricePerShare,
-          hasQuote: Number(value?.pricePerShare) > 0,
+        const pricePerShare = Number(value?.pricePerShare) > 0 ? value.pricePerShare : null;
+        const row = rows[ticker] ?? {
+          id: ticker,
+          ticker,
+          quantity: 0,
+          currentValue: 0,
+          pricePerShare,
+          hasQuote: false,
+          targetPercentage: Number(stockTargets[ticker]) || 0,
+          targetPercentageInput: stockTargets[ticker] ?? "",
         };
-      })
-      .sort((a, b) => a.ticker.localeCompare(b.ticker));
-  }, [assets, assetValues]);
+
+        row.quantity += Number(asset.quantity) || 0;
+        row.currentValue += Number(value?.currentValue) || 0;
+        if (pricePerShare) {
+          row.pricePerShare = pricePerShare;
+          row.hasQuote = true;
+        }
+
+        rows[ticker] = row;
+        return rows;
+      }, {});
+
+    return Object.values(rowsByTicker).sort((a, b) => a.ticker.localeCompare(b.ticker));
+  }, [assets, assetValues, stockTargets]);
 
   const eligibleCount = stockRows.filter((stock) => stock.hasQuote).length;
   const effectiveCompanyCount = Math.min(
@@ -83,6 +113,28 @@ export default function StocksPage() {
     const parsed = Number(nextValue);
     if (!Number.isFinite(parsed)) return;
     setContribution(String(Math.max(parsed, 0)));
+  };
+
+  const handleTargetChange = async (ticker, value) => {
+    if (value === "") {
+      setStockTargets((prev) => {
+        const nextTargets = { ...prev };
+        delete nextTargets[ticker];
+        return nextTargets;
+      });
+      await deleteStockTarget(ticker);
+      return;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+
+    const normalizedValue = String(Math.max(parsed, 0));
+    setStockTargets((prev) => ({ ...prev, [ticker]: normalizedValue }));
+    await upsertStockTarget({
+      ticker,
+      targetPercentage: Number(normalizedValue),
+    });
   };
 
   return (
@@ -155,7 +207,7 @@ export default function StocksPage() {
           </div>
         ) : (
           <div className="flex-1 overflow-auto">
-            <table className="w-full min-w-[860px] border-collapse text-sm">
+            <table className="w-full min-w-[960px] border-collapse text-sm">
               <thead className="sticky top-0 bg-black">
                 <tr className="border-b border-zinc-800 text-left text-zinc-500">
                   <th className="p-2">Ticker</th>
@@ -163,6 +215,7 @@ export default function StocksPage() {
                   <th className="p-2 text-right">Preço</th>
                   <th className="p-2 text-right">Atual</th>
                   <th className="p-2 text-right">Atual %</th>
+                  <th className="p-2 text-right">Desejado %</th>
                   <th className="p-2 text-right">Comprar</th>
                   <th className="p-2 text-right">Aporte</th>
                   <th className="p-2 text-right">Projetado</th>
@@ -184,6 +237,21 @@ export default function StocksPage() {
                       </td>
                       <td className="p-2 text-right">{formatCurrency(stock.currentValue)}</td>
                       <td className="p-2 text-right">{formatPercentValue(currentPercent)}</td>
+                      <td className="p-2 text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={stock.targetPercentageInput}
+                          onChange={(event) =>
+                            handleTargetChange(stock.ticker, event.target.value)
+                          }
+                          placeholder="0"
+                          className="w-20 border border-zinc-800 bg-black px-2 py-1 text-right text-zinc-100 outline-none transition-colors focus:border-zinc-500"
+                          aria-label={`Percentual desejado de ${stock.ticker}`}
+                        />
+                      </td>
                       <td className="p-2 text-right">
                         {stock.recommendedShares > 0 ? (
                           <span className="bg-emerald-400 px-1 text-black">

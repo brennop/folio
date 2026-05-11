@@ -1,6 +1,7 @@
 const DB_NAME = 'folio';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'assets';
+const STOCK_TARGETS_STORE_NAME = 'stockTargets';
 
 export function openDB() {
   return new Promise((resolve, reject) => {
@@ -14,8 +15,15 @@ export function openDB() {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
       }
+      if (!db.objectStoreNames.contains(STOCK_TARGETS_STORE_NAME)) {
+        db.createObjectStore(STOCK_TARGETS_STORE_NAME, { keyPath: 'ticker' });
+      }
     };
   });
+}
+
+function normalizeTicker(ticker) {
+  return String(ticker || '').trim().toUpperCase();
 }
 
 export async function addAsset(asset) {
@@ -60,6 +68,51 @@ export async function updateAsset(asset) {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
     const request = store.put(asset);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+export async function getAllStockTargets() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STOCK_TARGETS_STORE_NAME, 'readonly');
+    const store = tx.objectStore(STOCK_TARGETS_STORE_NAME);
+    const request = store.getAll();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+export async function upsertStockTarget({ ticker, targetPercentage }) {
+  const normalizedTicker = normalizeTicker(ticker);
+  if (!normalizedTicker) return;
+
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STOCK_TARGETS_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STOCK_TARGETS_STORE_NAME);
+    const request = store.put({
+      ticker: normalizedTicker,
+      targetPercentage: Math.max(0, Number(targetPercentage) || 0),
+    });
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+export async function deleteStockTarget(ticker) {
+  const normalizedTicker = normalizeTicker(ticker);
+  if (!normalizedTicker) return;
+
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STOCK_TARGETS_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STOCK_TARGETS_STORE_NAME);
+    const request = store.delete(normalizedTicker);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve();
