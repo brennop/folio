@@ -20,6 +20,26 @@ function formatPercentValue(value) {
   return `${value.toFixed(2)}%`;
 }
 
+const tickerColorClasses = [
+  "bg-teal-400",
+  "bg-cyan-400",
+  "bg-sky-400",
+  "bg-blue-400",
+  "bg-indigo-400",
+  "bg-violet-400",
+  "bg-purple-400",
+  "bg-fuchsia-400",
+  "bg-pink-400",
+  "bg-rose-400",
+  "bg-red-400",
+  "bg-orange-400",
+  "bg-amber-400",
+  "bg-yellow-400",
+  "bg-lime-400",
+  "bg-green-400",
+  "bg-emerald-400",
+];
+
 export default function StocksPage() {
   const [assets, setAssets] = useState([]);
   const [stockTargets, setStockTargets] = useState({});
@@ -40,7 +60,7 @@ export default function StocksPage() {
 
   const stockRows = useMemo(() => {
     const rowsByTicker = assets
-      .filter((asset) => asset.type === "acao")
+      .filter((asset) => asset.type === "acao" || asset.type === "etf")
       .reduce((rows, asset) => {
         const ticker = String(asset.ticker || "").toUpperCase();
         if (!ticker) return rows;
@@ -148,10 +168,10 @@ export default function StocksPage() {
             >
               ← Folio
             </Link>
-            <h1 className="text-2xl font-semibold">Equilíbrio de ações</h1>
+            <h1 className="text-2xl font-semibold">Equilíbrio de ações e ETFs</h1>
           </div>
           <div className="text-right text-sm text-zinc-500">
-            <div>Valor atual em ações</div>
+            <div>Valor atual em ações e ETFs</div>
             <div className="text-lg text-zinc-100">{formatCurrency(currentTotal)}</div>
           </div>
         </header>
@@ -171,7 +191,7 @@ export default function StocksPage() {
             />
           </label>
           <label className="text-sm text-zinc-400">
-            Máximo de empresas
+            Máximo de ativos
             <input
               type="number"
               min="1"
@@ -197,62 +217,65 @@ export default function StocksPage() {
 
         {hasMissingQuotes && (
           <div className="mb-4 border border-amber-900 bg-amber-950/30 p-3 text-sm text-amber-200">
-            Algumas ações estão sem cotação atual e foram excluídas das recomendações de compra.
+            Alguns ativos estão sem cotação atual e foram excluídos das recomendações de compra.
           </div>
         )}
 
         {stockRows.length === 0 && !isLoading ? (
           <div className="flex flex-1 items-center justify-center border border-zinc-900 text-zinc-500">
-            Nenhuma ação cadastrada. Esta página considera apenas ativos do tipo ação.
+            Nenhuma ação ou ETF cadastrado. Esta página considera apenas ações e ETFs.
           </div>
         ) : (
           <div className="flex-1 overflow-auto">
-            <table className="w-full min-w-[960px] border-collapse text-sm">
+            <table className="w-full min-w-[960px] border-collapse">
               <thead className="sticky top-0 bg-black">
-                <tr className="border-b border-zinc-800 text-left text-zinc-500">
-                  <th className="p-2">Ticker</th>
-                  <th className="p-2 text-right">Qtd.</th>
-                  <th className="p-2 text-right">Preço</th>
-                  <th className="p-2 text-right">Atual</th>
-                  <th className="p-2 text-right">Atual %</th>
-                  <th className="p-2 text-right">Desejado %</th>
-                  <th className="p-2 text-right">Comprar</th>
-                  <th className="p-2 text-right">Aporte</th>
-                  <th className="p-2 text-right">Projetado</th>
-                  <th className="p-2 text-right">Projetado %</th>
+                <tr className="border-b border-zinc-700 text-left text-zinc-400">
+                  <th className="p-1">Ticker</th>
+                  <th className="p-1 text-right">Qtd.</th>
+                  <th className="p-1 text-right">Preço</th>
+                  <th className="p-1 text-right">Atual</th>
+                  <th className="p-1 text-right">Atual %</th>
+                  <th className="p-1 text-right">Desejado %</th>
+                  <th className="p-1 text-right">Comprar</th>
+                  <th className="p-1 text-right">Aporte</th>
+                  <th className="p-1 text-right">Projetado</th>
+                  <th className="p-1 text-right">Projetado %</th>
                 </tr>
               </thead>
               <tbody>
-                {rebalance.rows.map((stock) => {
+                {rebalance.rows.map((stock, index) => {
                   const currentPercent =
                     currentTotal > 0 ? (stock.currentValue / currentTotal) * 100 : 0;
+                  const tickerColorClass =
+                    tickerColorClasses[index % tickerColorClasses.length];
                   return (
-                    <tr key={stock.id} className="border-b border-zinc-900 text-zinc-300">
-                      <td className="p-2">
-                        <span className="bg-pink-400 px-1 text-black">{stock.ticker}</span>
+                    <tr key={stock.id} className="text-zinc-400">
+                      <td>
+                        <span className={`${tickerColorClass} px-1 text-black`}>
+                          {stock.ticker}
+                        </span>
                       </td>
-                      <td className="p-2 text-right text-zinc-400">{stock.quantity}</td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">{stock.quantity}</td>
+                      <td className="text-right">
                         {stock.hasQuote ? formatCurrency(stock.pricePerShare) : "-"}
                       </td>
-                      <td className="p-2 text-right">{formatCurrency(stock.currentValue)}</td>
-                      <td className="p-2 text-right">{formatPercentValue(currentPercent)}</td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">{formatCurrency(stock.currentValue)}</td>
+                      <td className="text-right">{formatPercentValue(currentPercent)}</td>
+                      <td className="text-right text-xs">
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          inputMode="decimal"
                           value={stock.targetPercentageInput}
                           onChange={(event) =>
                             handleTargetChange(stock.ticker, event.target.value)
                           }
                           placeholder="0"
-                          className="w-20 border border-zinc-800 bg-black px-2 py-1 text-right text-zinc-100 outline-none transition-colors focus:border-zinc-500"
+                          className="w-20 border border-zinc-700 bg-zinc-800 text-xs pl-2 text-zinc-100 outline-none transition-colors focus:border-zinc-500"
                           aria-label={`Percentual desejado de ${stock.ticker}`}
                         />
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">
                         {stock.recommendedShares > 0 ? (
                           <span className="bg-emerald-400 px-1 text-black">
                             {stock.recommendedShares}
@@ -261,9 +284,9 @@ export default function StocksPage() {
                           <span className="text-zinc-600">0</span>
                         )}
                       </td>
-                      <td className="p-2 text-right">{formatCurrency(stock.recommendedAmount)}</td>
-                      <td className="p-2 text-right">{formatCurrency(stock.projectedValue)}</td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">{formatCurrency(stock.recommendedAmount)}</td>
+                      <td className="text-right">{formatCurrency(stock.projectedValue)}</td>
+                      <td className="text-right">
                         {formatPercentValue(stock.projectedPercent)}
                       </td>
                     </tr>
@@ -277,7 +300,7 @@ export default function StocksPage() {
             )}
             {stockRows.length > 0 && contributionValue > 0 && rebalance.totalAllocated === 0 && (
               <div className="mt-4 text-sm text-zinc-500">
-                O aporte informado não compra uma ação inteira das empresas elegíveis.
+                O aporte informado não compra uma unidade inteira dos ativos elegíveis.
               </div>
             )}
           </div>
