@@ -10,6 +10,7 @@ import {
 import { calculateStockRebalance } from "@/lib/rebalance";
 import { formatCurrency } from "@/lib/format";
 import { usePortfolioValue } from "@/hooks/usePortfolioValue";
+import TickerPrice from "@/components/TickerPrice";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -67,21 +68,33 @@ export default function StocksPage() {
 
         const value = assetValues[asset.id];
         const pricePerShare = Number(value?.pricePerShare) > 0 ? value.pricePerShare : null;
+        const quantity = Number(asset.quantity) || 0;
+        const avgPrice = Number(asset.avgPrice) || 0;
         const row = rows[ticker] ?? {
           id: ticker,
           ticker,
           quantity: 0,
+          avgPriceCost: 0,
+          avgPriceQuantity: 0,
+          averagePrice: null,
           currentValue: 0,
           pricePerShare,
+          dailyChange: null,
           hasQuote: false,
           targetPercentage: Number(stockTargets[ticker]) || 0,
           targetPercentageInput: stockTargets[ticker] ?? "",
         };
 
-        row.quantity += Number(asset.quantity) || 0;
+        row.quantity += quantity;
+        if (quantity > 0 && avgPrice > 0) {
+          row.avgPriceCost += quantity * avgPrice;
+          row.avgPriceQuantity += quantity;
+          row.averagePrice = row.avgPriceCost / row.avgPriceQuantity;
+        }
         row.currentValue += Number(value?.currentValue) || 0;
         if (pricePerShare) {
           row.pricePerShare = pricePerShare;
+          row.dailyChange = value?.dailyChange ?? null;
           row.hasQuote = true;
         }
 
@@ -227,11 +240,12 @@ export default function StocksPage() {
           </div>
         ) : (
           <div className="flex-1 overflow-auto">
-            <table className="w-full min-w-[960px] border-collapse">
+            <table className="w-full min-w-[1040px] border-collapse">
               <thead className="sticky top-0 bg-black">
                 <tr className="border-b border-zinc-700 text-left text-zinc-400">
                   <th className="p-1">Ticker</th>
                   <th className="p-1 text-right">Qtd.</th>
+                  <th className="p-1 text-right">PM</th>
                   <th className="p-1 text-right">Preço</th>
                   <th className="p-1 text-right">Atual</th>
                   <th className="p-1 text-right">Atual %</th>
@@ -251,11 +265,17 @@ export default function StocksPage() {
                   return (
                     <tr key={stock.id} className="text-zinc-400">
                       <td>
-                        <span className={`${tickerColorClass} px-1 text-black`}>
-                          {stock.ticker}
-                        </span>
+                        <TickerPrice
+                          ticker={stock.ticker}
+                          pricePerShare={stock.hasQuote ? stock.pricePerShare : null}
+                          dailyChange={stock.dailyChange}
+                          className={`${tickerColorClass} px-1`}
+                        />
                       </td>
                       <td className="text-right">{stock.quantity}</td>
+                      <td className="text-right">
+                        {stock.averagePrice ? formatCurrency(stock.averagePrice) : "-"}
+                      </td>
                       <td className="text-right">
                         {stock.hasQuote ? formatCurrency(stock.pricePerShare) : "-"}
                       </td>

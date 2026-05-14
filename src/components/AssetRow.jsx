@@ -1,5 +1,6 @@
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 import Tooltip from "@/components/Tooltip";
+import TickerPrice from "@/components/TickerPrice";
 
 const palette = {
   'acao': 'bg-pink-400',
@@ -32,16 +33,6 @@ export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete 
   };
 
   const getNameTooltipContent = () => {
-    if (asset.type === "acao" || asset.type === "etf") {
-      if (assetValue?.pricePerShare != null) {
-        const changeDisplay = assetValue.dailyChange != null
-          ? ` (${assetValue.dailyChange >= 0 ? "+" : ""}${assetValue.dailyChange.toFixed(2)}%)`
-          : "";
-        return `${formatCurrency(assetValue.pricePerShare)}${changeDisplay}`;
-      }
-      return null;
-    }
-
     if (asset.type === "cdb" || asset.type === "lci" || asset.type === "lca") {
       const rate = asset.rateType === "prefixado"
         ? `${asset.rate}% a.a.`
@@ -81,7 +72,14 @@ export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete 
     <tr className="text-zinc-400 text-sm">
       <td className="text-zinc-500">{formatDate(asset.buyDate)}</td>
       <td className="">
-        {getNameTooltipContent() ? (
+        {asset.type === "acao" || asset.type === "etf" ? (
+          <TickerPrice
+            ticker={formatName(asset)}
+            pricePerShare={assetValue?.pricePerShare}
+            dailyChange={assetValue?.dailyChange}
+            className={palette[asset.type]}
+          />
+        ) : getNameTooltipContent() ? (
           <Tooltip content={getNameTooltipContent()}>
             <span className={`${palette[asset.type]} text-black h-full cursor-default`}>
               {formatName(asset)}
