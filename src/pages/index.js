@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Geist_Mono } from 'next/font/google';
 import { getAllAssets, addAsset, deleteAsset, updateAsset } from '@/lib/db';
-import AssetList from '@/components/AssetList';
+import AssetViews from '@/components/AssetViews';
 import EditAssetModal from '@/components/EditAssetModal';
 import ChatInput from '@/components/ChatInput';
 import PortfolioSummary from '@/components/PortfolioSummary';
@@ -136,7 +136,13 @@ export default function Home() {
           error={error}
         />
 
-        <AssetList assets={assets} assetValues={assetValues} indices={indices} onDelete={handleDelete} onEdit={handleEdit} />
+        <AssetViews
+          assets={assets}
+          assetValues={assetValues}
+          indices={indices}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+        />
 
         <div className="mt-4">
           <ChatInput onSubmit={handleSubmit} />

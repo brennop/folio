@@ -1,4 +1,5 @@
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { formatAssetName } from "@/lib/assets";
 import Tooltip from "@/components/Tooltip";
 import TickerPrice from "@/components/TickerPrice";
 
@@ -14,24 +15,6 @@ const palette = {
 }
 
 export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete }) {
-  const formatName = (asset) => {
-    if (asset.type === "acao" || asset.type === "etf") {
-      return asset.ticker;
-    }
-    if (asset.type === "cdb" || asset.type === "lci" || asset.type === "lca") {
-      return `${asset.type.toUpperCase()} ${asset.bank}`;
-    }
-    if (asset.type?.startsWith("tesouro_")) {
-      const typeLabels = {
-        tesouro_selic: "Tesouro Selic",
-        tesouro_ipca: "Tesouro IPCA+",
-        tesouro_prefixado: "Tesouro Prefixado",
-      };
-      return typeLabels[asset.type] || asset.type.toUpperCase();
-    }
-    return `${asset.type.toUpperCase()} ${asset.bank}`;
-  };
-
   const getNameTooltipContent = () => {
     if (asset.type === "cdb" || asset.type === "lci" || asset.type === "lca") {
       const rate = asset.rateType === "prefixado"
@@ -74,7 +57,7 @@ export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete 
       <td className="">
         {asset.type === "acao" || asset.type === "etf" ? (
           <TickerPrice
-            ticker={formatName(asset)}
+            ticker={formatAssetName(asset)}
             pricePerShare={assetValue?.pricePerShare}
             dailyChange={assetValue?.dailyChange}
             className={palette[asset.type]}
@@ -82,12 +65,12 @@ export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete 
         ) : getNameTooltipContent() ? (
           <Tooltip content={getNameTooltipContent()}>
             <span className={`${palette[asset.type]} text-black h-full cursor-default`}>
-              {formatName(asset)}
+              {formatAssetName(asset)}
             </span>
           </Tooltip>
         ) : (
           <span className={`${palette[asset.type]} text-black h-full`}>
-            {formatName(asset)}
+            {formatAssetName(asset)}
           </span>
         )}
       </td>

@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
+import { formatAssetName } from "@/lib/assets";
 import AssetRow from "@/components/AssetRow";
 
 const columns = [
   { key: "buyDate", label: "Data", getValue: (a) => a.buyDate && new Date(a.buyDate) },
-  { key: "name", label: "Nome", getValue: (a) => `${a.type || ""} ${a.name || ""}`.toLowerCase() },
+  { key: "name", label: "Nome", getValue: (a) => formatAssetName(a)?.toLowerCase() },
   { key: "value", label: "Valor" },
   { key: "currentValue", label: "Atual", getValue: (a, v) => v?.currentValue },
   { key: "profitPercent", label: "Lucro", getValue: (a, v) => v?.profitPercent },
