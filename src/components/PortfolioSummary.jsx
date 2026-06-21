@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { formatCurrency, formatPercent } from '@/lib/format';
+import NumberFlow from '@number-flow/react'
 
-export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error, xirr }) {
+export default function PortfolioSummary({ totalValue, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error, xirr }) {
   const [isHidden, setIsHidden] = useState(false);
 
   if (error) {
@@ -19,21 +20,17 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
           <div className="flex items-center gap-2">
             <p className="text-zinc-500 text-sm mb-1">Patrimônio total</p>
             <button onClick={() => setIsHidden(!isHidden)} className="text-zinc-500 hover:text-zinc-300 mb-1 text-sm">
-              {isHidden ? '⌾' : '⍉'}
+              {isHidden ? '⍉' : '⌾'}
             </button>
           </div>
-          {isLoading ? (
-            <div className="h-8 w-32 bg-zinc-800 animate-pulse" />
-          ) : (
-            <p className="text-3xl font-semibold text-zinc-100">
-              {isHidden ? 'R$ *****' : formatCurrency(totalValue)}
+          {(<p className="text-3xl font-semibold text-zinc-100">
+            <NumberFlow value={isHidden ? null : totalValue} format={{ style: 'currency', currency: 'BRL' }} />
             </p>
           )}
-          {investedThisYear > 0 && !isLoading && (
+
             <p className="text-zinc-500 text-sm mt-1">
-              {isHidden ? 'R$ *****' : formatCurrency(investedThisYear)} em {new Date().getFullYear()}
+          <NumberFlow value={isHidden ? 0 : investedThisYear} format={{ style: 'currency', currency: 'BRL' }} suffix={` em ${new Date().getFullYear()}`} />
             </p>
-          )}
         </div>
 
         <div className="text-right">
