@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   calculateCdiLinked,
   calculateTesouroSelic,
@@ -6,6 +6,7 @@ import {
   calculateTesouroPrefixado,
   calculateEquity,
 } from '@/lib/calculations';
+import xirr from "xirr";
 
 export function usePortfolioValue(assets) {
   const [state, setState] = useState({
@@ -51,10 +52,10 @@ export function usePortfolioValue(assets) {
       const [quotesResponse, indicesResponse] = await Promise.all([
         tickers.length > 0
           ? fetch('/api/quotes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tickers }),
-            }).then((r) => r.json())
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tickers }),
+          }).then((r) => r.json())
           : Promise.resolve({}),
         fetch('/api/indices').then((r) => r.json()),
       ]);
@@ -158,6 +159,7 @@ export function usePortfolioValue(assets) {
         assetValues[asset.id] = {
           ...result,
           invested,
+          buyDate: asset.buyDate
         };
 
         const currentValue = result.currentValue || 0;
@@ -208,5 +210,18 @@ export function usePortfolioValue(assets) {
     calculateValues();
   }, [calculateValues]);
 
-  return state;
+  const xirrRate = useMemo(() => {
+    const transactions = Object.values(state.assetValues).flatMap(asset => {
+      return [
+        { amount: -asset.invested, when: new Date(asset.buyDate) },
+        { amount: asset.currentValue, when: new Date() },
+      ]
+    })
+
+    if (transactions.length < 2) return 0
+
+    return xirr(transactions)
+  }, [state.assetValues]);
+
+  return { xirr: xirrRate, ...state };
 }

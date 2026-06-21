@@ -17,7 +17,7 @@ export default function Home() {
   const [assets, setAssets] = useState([]);
   const [editingAsset, setEditingAsset] = useState(null);
   const fileInputRef = useRef(null);
-  const { totalValue, profit, profitPercent, assetValues, rendaFixaTotal, rendaVariavelTotal, investedThisYear, indices, isLoading, error } = usePortfolioValue(assets);
+  const { totalValue, profit, profitPercent, assetValues, rendaFixaTotal, rendaVariavelTotal, investedThisYear, indices, isLoading, error, xirr } = usePortfolioValue(assets);
 
   useEffect(() => {
     getAllAssets().then(setAssets);
@@ -133,6 +133,7 @@ export default function Home() {
           rendaVariavelTotal={rendaVariavelTotal}
           investedThisYear={investedThisYear}
           isLoading={isLoading}
+          xirr={xirr}
           error={error}
         />
 

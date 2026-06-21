@@ -905,6 +905,11 @@ nanoid@^3.3.11, nanoid@^3.3.6:
   resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.11.tgz#4f4f112cefbe303202f2199838128936266d185b"
   integrity sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==
 
+newton-raphson-method@^1.0.0:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/newton-raphson-method/-/newton-raphson-method-1.0.2.tgz#0a95c6ad86edc696aca7e1787cd8da034a4262b0"
+  integrity sha512-UoBJJxNVVQhviRvled1bL76IjmPls4dNLPeF661FW2eNrv/pKKfRDpOdlN+vo9XamZvj8OMt/KtjOBTFN6I0gw==
+
 next@16.1.6:
   version "16.1.6"
   resolved "https://registry.yarnpkg.com/next/-/next-16.1.6.tgz#24a861371cbe211be7760d9a89ddf2415e3824de"
@@ -1204,6 +1209,13 @@ ws@^8.18.0:
   version "8.19.0"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.19.0.tgz#ddc2bdfa5b9ad860204f5a72a4863a8895fd8c8b"
   integrity sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==
+
+xirr@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/xirr/-/xirr-1.1.0.tgz#a9cbcff354091fc7a0a73f1570ab4c69c6f96872"
+  integrity sha512-Ivl/gbn5rCkJqig0B+40GQyk1Rqjo0SMW7pTnplV+VG7zlXEzJ6SYdukYmjejCWFY1TGerqPbdwenR0LK5yAWw==
+  dependencies:
+    newton-raphson-method "^1.0.0"
 
 zod@^4.3.6:
   version "4.3.6"

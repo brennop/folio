@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatCurrency, formatPercent } from '@/lib/format';
 
-export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error }) {
+export default function PortfolioSummary({ totalValue, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear, isLoading, error, xirr }) {
   const [isHidden, setIsHidden] = useState(false);
 
   if (error) {
@@ -11,8 +11,6 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
       </div>
     );
   }
-
-  const profitColor = profit >= 0 ? 'text-green-400' : 'text-red-400';
 
   return (
     <div className="mb-6 p-4 border-2 border-zinc-800">
@@ -39,12 +37,12 @@ export default function PortfolioSummary({ totalValue, profit, profitPercent, re
         </div>
 
         <div className="text-right">
-          <p className="text-zinc-500 text-sm mb-1">Lucro/Prejuízo</p>
+          <p className="text-zinc-500 text-sm mb-1">Rentabilidade</p>
           {isLoading ? (
             <div className="h-6 w-24 bg-zinc-800 animate-pulse" />
           ) : (
-            <p className={`text-xl font-medium ${profitColor}`}>
-              {isHidden ? `***** (${formatPercent(profitPercent)})` : `${formatCurrency(profit)} (${formatPercent(profitPercent)})`}
+            <p className={`text-xl font-medium text-green-400`}>
+              {formatPercent(xirr * 100)} a.a.
             </p>
           )}
         </div>
