@@ -6,12 +6,11 @@ import {
   calculateTesouroPrefixado,
   calculateEquity,
 } from '@/lib/calculations';
+import {useLocalStorage} from './useLocalStorage';
 import xirr from "xirr";
 
 export function usePortfolioValue(assets) {
-  const [state, setState] = useState({
-    totalValue: 0,
-    totalInvested: 0,
+  const [state, setState] = useLocalStorage('v1', {
     profit: 0,
     profitPercent: 0,
     assetValues: {},
