@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   calculateCdiLinked,
   calculateTesouroSelic,
-  calculateTesouroIpca,
   calculateTesouroPrefixado,
   calculateEquity,
 } from '@/lib/calculations';
+import { 
+  calculateTesouroIpca,
+} from '@/lib/ipca';
 import {useLocalStorage} from './useLocalStorage';
 import xirr from "xirr";
 
@@ -48,7 +50,7 @@ export function usePortfolioValue(assets) {
       const tickers = stockAssets.map((a) => a.ticker);
 
       // Fetch data in parallel
-      const [quotesResponse, indicesResponse] = await Promise.all([
+      const [quotesResponse, indicesResponse, seriesResponse] = await Promise.all([
         tickers.length > 0
           ? fetch('/api/quotes', {
             method: 'POST',
@@ -57,10 +59,12 @@ export function usePortfolioValue(assets) {
           }).then((r) => r.json())
           : Promise.resolve({}),
         fetch('/api/indices').then((r) => r.json()),
+        fetch('/api/bcb-series?startDate=2024-01-01').then((r) => r.json()),
       ]);
 
       const quotes = quotesResponse;
       const indices = indicesResponse;
+      const series = seriesResponse;
 
       let totalValue = 0;
       let totalInvested = 0;
@@ -137,10 +141,11 @@ export function usePortfolioValue(assets) {
 
           case 'tesouro_ipca':
             result = calculateTesouroIpca(
-              asset.amount,
-              asset.buyDate,
-              asset.rate || 6, // Default spread if not specified
-              indices.ipca
+              { principal: asset.amount,
+                buyDate: asset.buyDate,
+                spread: asset.rate || 6, // Default spread if not specified
+                ipca: series.data.ipca
+              }
             );
             invested = asset.amount;
             break;
