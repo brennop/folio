@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
+import { todayIso } from "@/lib/format";
 
 const assetSchema = z.object({
   type: z.enum([
@@ -84,7 +85,7 @@ export default async function handler(req) {
 
     // Default buyDate to today if not provided
     if (!asset.buyDate) {
-      asset.buyDate = new Date().toISOString().split('T')[0];
+      asset.buyDate = todayIso();
     }
 
     return Response.json(asset);

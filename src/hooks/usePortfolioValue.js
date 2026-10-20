@@ -8,8 +8,26 @@ import {
 import { 
   calculateTesouroIpca,
 } from '@/lib/ipca';
+import { parseDate } from '@/lib/format';
 import {useLocalStorage} from './useLocalStorage';
 import xirr from "xirr";
+
+// Resolves to `fallback` instead of rejecting, so one failing upstream (e.g. BCB) doesn't break the whole portfolio
+async function fetchJson(url, options, fallback) {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error(`Failed to fetch ${url}:`, error);
+    return fallback;
+  }
+}
+
+function getInvested(asset) {
+  if (asset.type === 'acao' || asset.type === 'etf') return asset.quantity * asset.avgPrice;
+  return asset.amount || 0;
+}
 
 export function usePortfolioValue(assets) {
   const [state, setState] = useLocalStorage('v1', {
@@ -50,21 +68,17 @@ export function usePortfolioValue(assets) {
       const tickers = stockAssets.map((a) => a.ticker);
 
       // Fetch data in parallel
-      const [quotesResponse, indicesResponse, seriesResponse] = await Promise.all([
+      const [quotes, indices, series] = await Promise.all([
         tickers.length > 0
-          ? fetch('/api/quotes', {
+          ? fetchJson('/api/quotes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tickers }),
-          }).then((r) => r.json())
+          }, {})
           : Promise.resolve({}),
-        fetch('/api/indices').then((r) => r.json()),
-        fetch('/api/bcb-series?startDate=2024-01-01').then((r) => r.json()),
+        fetchJson('/api/indices', undefined, null),
+        fetchJson('/api/bcb-series?startDate=2024-01-01', undefined, null),
       ]);
-
-      const quotes = quotesResponse;
-      const indices = indicesResponse;
-      const series = seriesResponse;
 
       let totalValue = 0;
       let totalInvested = 0;
@@ -79,85 +93,84 @@ export function usePortfolioValue(assets) {
 
       for (const asset of assets) {
         let result;
-        let invested = 0;
+        const invested = getInvested(asset);
 
-        switch (asset.type) {
-          case 'acao':
-          case 'etf': {
-            const quote = quotes[asset.ticker];
-            if (quote && !quote.error) {
-              result = {
-                ...calculateEquity(asset.quantity, asset.avgPrice, quote.price),
-                dailyChange: quote.change ?? null,
-                pricePerShare: quote.price,
-              };
-              invested = asset.quantity * asset.avgPrice;
-            } else {
-              // Fallback to average price if quote unavailable
-              result = {
-                currentValue: asset.quantity * asset.avgPrice,
-                invested: asset.quantity * asset.avgPrice,
-                profit: 0,
-                profitPercent: 0,
-                dailyChange: null,
-                pricePerShare: null,
-              };
-              invested = asset.quantity * asset.avgPrice;
+        // Fallback to invested amount when market data is unavailable
+        const unavailable = {
+          currentValue: invested,
+          invested,
+          profit: 0,
+          profitPercent: 0,
+          dailyChange: null,
+          pricePerShare: null,
+        };
+
+        try {
+          switch (asset.type) {
+            case 'acao':
+            case 'etf': {
+              const quote = quotes[asset.ticker];
+              if (quote && !quote.error) {
+                result = {
+                  ...calculateEquity(asset.quantity, asset.avgPrice, quote.price),
+                  dailyChange: quote.change ?? null,
+                  pricePerShare: quote.price,
+                };
+              } else {
+                result = unavailable;
+              }
+              break;
             }
-            break;
-          }
 
-          case 'cdb':
-            if (asset.rateType === 'prefixado') {
-              result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
-            } else {
+            case 'cdb':
+              if (asset.rateType === 'prefixado') {
+                result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
+              } else {
+                result = calculateCdiLinked(
+                  asset.amount,
+                  asset.buyDate,
+                  asset.rate,
+                  indices.cdi.annual,
+                  false
+                );
+              }
+              break;
+
+            case 'lci':
+            case 'lca':
               result = calculateCdiLinked(
                 asset.amount,
                 asset.buyDate,
                 asset.rate,
                 indices.cdi.annual,
-                false
+                true // tax-free
               );
-            }
-            invested = asset.amount;
-            break;
+              break;
 
-          case 'lci':
-          case 'lca':
-            result = calculateCdiLinked(
-              asset.amount,
-              asset.buyDate,
-              asset.rate,
-              indices.cdi.annual,
-              true // tax-free
-            );
-            invested = asset.amount;
-            break;
+            case 'tesouro_selic':
+              result = calculateTesouroSelic(asset.amount, asset.buyDate, indices.selic);
+              break;
 
-          case 'tesouro_selic':
-            result = calculateTesouroSelic(asset.amount, asset.buyDate, indices.selic);
-            invested = asset.amount;
-            break;
+            case 'tesouro_ipca':
+              result = calculateTesouroIpca(
+                { principal: asset.amount,
+                  buyDate: asset.buyDate,
+                  spread: asset.rate || 6, // Default spread if not specified
+                  ipca: series?.data?.ipca
+                }
+              );
+              break;
 
-          case 'tesouro_ipca':
-            result = calculateTesouroIpca(
-              { principal: asset.amount,
-                buyDate: asset.buyDate,
-                spread: asset.rate || 6, // Default spread if not specified
-                ipca: series.data.ipca
-              }
-            );
-            invested = asset.amount;
-            break;
+            case 'tesouro_prefixado':
+              result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
+              break;
 
-          case 'tesouro_prefixado':
-            result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
-            invested = asset.amount;
-            break;
-
-          default:
-            result = { currentValue: 0, profit: 0, profitPercent: 0 };
-            invested = 0;
+            default:
+              result = { currentValue: 0, profit: 0, profitPercent: 0 };
+          }
+        } catch (error) {
+          console.error(`Failed to calculate asset ${asset.id} (${asset.type}):`, error);
+          result = unavailable;
         }
 
         assetValues[asset.id] = {
@@ -177,7 +190,7 @@ export function usePortfolioValue(assets) {
         }
 
         if (asset.buyDate) {
-          const buyYear = new Date(asset.buyDate).getFullYear();
+          const buyYear = parseDate(asset.buyDate).getFullYear();
           if (buyYear === currentYear) {
             investedThisYear += invested;
           }
@@ -217,7 +230,7 @@ export function usePortfolioValue(assets) {
   const xirrRate = useMemo(() => {
     const transactions = Object.values(state.assetValues).flatMap(asset => {
       return [
-        { amount: -asset.invested, when: new Date(asset.buyDate) },
+        { amount: -asset.invested, when: parseDate(asset.buyDate) },
         { amount: asset.currentValue, when: new Date() },
       ]
     })

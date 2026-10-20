@@ -7,6 +7,8 @@ import bcbSeries from './api/bcb-series';
 const server = Bun.serve({
   // Keep 3000: IndexedDB/localStorage are origin-scoped, changing the port "loses" data
   port: Number(process.env.PORT) || 3000,
+  // Default is 10s, which cuts off /api/bcb-series while it waits (up to 10s) on the slow BCB API
+  idleTimeout: 30,
   development: process.env.NODE_ENV !== 'production' && { hmr: true, console: true },
   routes: {
     '/': index,

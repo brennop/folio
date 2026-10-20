@@ -4,8 +4,10 @@
 // 361-720 days: 17.5%
 // > 720 days: 15%
 
+import { parseDate } from '@/lib/format';
+
 export function getDaysHeld(buyDate) {
-  const buy = new Date(buyDate);
+  const buy = parseDate(buyDate);
   const now = new Date();
   const diffTime = now - buy;
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
