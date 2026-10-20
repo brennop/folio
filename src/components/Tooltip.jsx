@@ -11,9 +11,6 @@ import {
   FloatingPortal,
 } from "@floating-ui/react";
 import { useState } from "react";
-import { Geist_Mono } from "next/font/google";
-
-const geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export default function Tooltip({ children, content }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,7 +45,7 @@ export default function Tooltip({ children, content }) {
             ref={refs.setFloating}
             style={floatingStyles}
             {...getFloatingProps()}
-            className={`bg-zinc-200 text-zinc-800 text-sm z-50 ${geistMono.className}`}
+            className={`bg-zinc-200 text-zinc-800 text-sm z-50 font-mono`}
           >
             {content}
           </div>

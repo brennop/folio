@@ -1,17 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { Geist_Mono } from 'next/font/google';
+import { Link } from '@/router';
 import { getAllAssets, addAsset, deleteAsset, updateAsset } from '@/lib/db';
 import AssetViews from '@/components/AssetViews';
 import EditAssetModal from '@/components/EditAssetModal';
 import ChatInput from '@/components/ChatInput';
 import PortfolioSummary from '@/components/PortfolioSummary';
 import { usePortfolioValue } from '@/hooks/usePortfolioValue';
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 export default function Home() {
   const [assets, setAssets] = useState([]);
@@ -85,7 +79,7 @@ export default function Home() {
 
   return (
     <div
-      className={`${geistMono.className} flex min-h-screen items-center justify-center bg-black`}
+      className={`font-mono flex min-h-screen items-center justify-center bg-black`}
     >
       <main className="flex h-screen w-full max-w-4xl flex-col bg-black py-8 px-6">
         <header className="mb-6 flex items-center justify-between">

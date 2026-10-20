@@ -10,20 +10,16 @@ const DEFAULTS = {
 
 async function fetchBCBSeries(seriesCode) {
   const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesCode}/dados/ultimos/1?formato=json`;
-  const response = await fetch(url, { timeout: 5000 });
+  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error(`BCB returned ${response.status}`);
   const data = await response.json();
   return parseFloat(data[0]?.valor) || null;
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+export default async function handler() {
   // Return cached data if still valid
   if (indicesCache && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return res.status(200).json(indicesCache);
+    return Response.json(indicesCache);
   }
 
   const result = {
@@ -67,5 +63,5 @@ export default async function handler(req, res) {
   indicesCache = result;
   cacheTimestamp = Date.now();
 
-  res.status(200).json(result);
+  return Response.json(result);
 }

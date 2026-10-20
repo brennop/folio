@@ -59,15 +59,11 @@ Examples:
 - "LCI Inter 5000 95% CDI vence 2025-12-01" → type: lci, bank: Inter, amount: 5000, rate: 95, rateType: cdi, maturityDate: 2025-12-01
 - "Tesouro Selic 2000 reais" → type: tesouro_selic, amount: 2000`;
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { text } = req.body;
+export default async function handler(req) {
+  const { text } = await req.json();
 
   if (!text) {
-    return res.status(400).json({ error: "Text is required" });
+    return Response.json({ error: "Text is required" }, { status: 400 });
   }
 
   console.log(assetSchema.toJSONSchema());
@@ -91,10 +87,10 @@ export default async function handler(req, res) {
       asset.buyDate = new Date().toISOString().split('T')[0];
     }
 
-    res.status(200).json(asset);
+    return Response.json(asset);
   } catch (error) {
     console.error("Gemini API error:", error);
 
-    res.status(500).json({ error: "Failed to parse asset" });
+    return Response.json({ error: "Failed to parse asset" }, { status: 500 });
   }
 }

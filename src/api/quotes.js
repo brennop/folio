@@ -1,15 +1,11 @@
 const cache = new Map();
 const CACHE_TTL = 60 * 1000; // 60 seconds
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { tickers } = req.body;
+export default async function handler(req) {
+  const { tickers } = await req.json();
 
   if (!tickers || !Array.isArray(tickers) || tickers.length === 0) {
-    return res.status(400).json({ error: 'tickers array is required' });
+    return Response.json({ error: 'tickers array is required' }, { status: 400 });
   }
 
   const results = {};
@@ -71,5 +67,5 @@ export default async function handler(req, res) {
 
   await Promise.all(fetchPromises);
 
-  res.status(200).json(results);
+  return Response.json(results);
 }

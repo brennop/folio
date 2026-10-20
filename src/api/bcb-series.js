@@ -1,4 +1,4 @@
-// pages/api/bcb-series.js
+// api/bcb-series.js
 // GET /api/bcb-series?startDate=YYYY-MM-DD
 // Returns CDI, SELIC and IPCA series from Banco Central do Brasil.
 
@@ -93,38 +93,36 @@ async function fetchSeries(code, bcbStartDate) {
 // Handler
 // ---------------------------------------------------------------------------
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+const CACHE_CONTROL = 'public, s-maxage=86400, stale-while-revalidate=3600'
 
-  const { startDate } = req.query
+export default async function handler(req) {
+  const startDate = new URL(req.url).searchParams.get('startDate')
 
   if (!startDate) {
-    return res.status(400).json({ error: 'Query param `startDate` is required (YYYY-MM-DD or DD/MM/YYYY)' })
+    return Response.json({ error: 'Query param `startDate` is required (YYYY-MM-DD or DD/MM/YYYY)' }, { status: 400 })
   }
 
   const isoDate = normaliseToIso(startDate)
 
   if (!isoDate) {
-    return res.status(400).json({
+    return Response.json({
       error: 'Invalid `startDate`. Use YYYY-MM-DD or DD/MM/YYYY.',
-    })
+    }, { status: 400 })
   }
 
   // Reject future dates (BCB won't have data past today anyway)
   const todayIso = new Date().toISOString().slice(0, 10)
   if (isoDate > todayIso) {
-    return res.status(400).json({ error: '`startDate` cannot be in the future.' })
+    return Response.json({ error: '`startDate` cannot be in the future.' }, { status: 400 })
   }
 
   const cacheKey = `bcb-series:${isoDate}`
   const hit = getCached(cacheKey)
 
   if (hit) {
-    res.setHeader('X-Cache', 'HIT')
-    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600')
-    return res.status(200).json(hit)
+    return Response.json(hit, {
+      headers: { 'X-Cache': 'HIT', 'Cache-Control': CACHE_CONTROL },
+    })
   }
 
   const bcbDate = toBcbDate(isoDate)
@@ -151,14 +149,14 @@ export default async function handler(req, res) {
 
     setCached(cacheKey, payload)
 
-    res.setHeader('X-Cache', 'MISS')
-    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600')
-    return res.status(200).json(payload)
+    return Response.json(payload, {
+      headers: { 'X-Cache': 'MISS', 'Cache-Control': CACHE_CONTROL },
+    })
   } catch (err) {
     console.error('[bcb-series]', err)
-    return res.status(502).json({
+    return Response.json({
       error: 'Failed to fetch data from BCB.',
       detail: err.message,
-    })
+    }, { status: 502 })
   }
 }

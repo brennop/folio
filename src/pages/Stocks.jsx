@@ -1,6 +1,5 @@
-import Link from "next/link";
+import { Link } from "@/router";
 import { useEffect, useMemo, useState } from "react";
-import { Geist_Mono } from "next/font/google";
 import {
   deleteStockTarget,
   getAllAssets,
@@ -11,11 +10,6 @@ import { calculateStockRebalance } from "@/lib/rebalance";
 import { formatCurrency } from "@/lib/format";
 import { usePortfolioValue } from "@/hooks/usePortfolioValue";
 import TickerPrice from "@/components/TickerPrice";
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 function formatPercentValue(value) {
   return `${value.toFixed(2)}%`;
@@ -171,7 +165,7 @@ export default function StocksPage() {
   };
 
   return (
-    <div className={`${geistMono.className} min-h-screen bg-black text-zinc-100`}>
+    <div className="font-mono min-h-screen bg-black text-zinc-100">
       <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>

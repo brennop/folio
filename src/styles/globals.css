@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
+@import "@fontsource/geist-mono/600.css";
 
 :root {
   --background: #0a0a0a;
@@ -9,7 +12,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
 body {
