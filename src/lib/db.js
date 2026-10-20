@@ -1,5 +1,6 @@
 const DB_NAME = 'folio';
 const DB_VERSION = 2;
+// Assets come from $FIRE_DATA (/api/assets); the 'assets' store is legacy and no longer read
 const STORE_NAME = 'assets';
 const STOCK_TARGETS_STORE_NAME = 'stockTargets';
 
@@ -24,54 +25,6 @@ export function openDB() {
 
 function normalizeTicker(ticker) {
   return String(ticker || '').trim().toUpperCase();
-}
-
-export async function addAsset(asset) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.add(asset);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-export async function getAllAssets() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-export async function deleteAsset(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.delete(id);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
-}
-
-export async function updateAsset(asset) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.put(asset);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
 }
 
 export async function getAllStockTargets() {

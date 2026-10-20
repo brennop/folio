@@ -21,3 +21,13 @@ export function formatAssetName(asset) {
 
   return `${type.toUpperCase()} ${asset.bank || ""}`.trim();
 }
+
+// Read from $FIRE_DATA by the server
+export async function fetchAssets() {
+  const res = await fetch("/api/assets");
+  if (!res.ok) {
+    console.error("Failed to load assets:", await res.text());
+    return [];
+  }
+  return res.json();
+}

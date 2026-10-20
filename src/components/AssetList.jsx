@@ -10,16 +10,12 @@ const columns = [
   { key: "currentValue", label: "Atual", getValue: (a, v) => v?.currentValue },
   { key: "profitPercent", label: "Lucro", getValue: (a, v) => v?.profitPercent },
   { key: "maturityDate", label: "Vencimento", getValue: (a) => a.maturityDate && parseDate(a.maturityDate) },
-  { key: "edit", label: "" },
-  { key: "delete", label: "" },
 ];
 
 export default function AssetList({
   assets,
   assetValues = {},
   indices,
-  onDelete,
-  onEdit,
 }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
@@ -79,8 +75,6 @@ export default function AssetList({
               asset={asset}
               assetValue={assetValues[asset.id]}
               indices={indices}
-              onEdit={onEdit}
-              onDelete={onDelete}
             />
           ))}
         </tbody>

@@ -14,7 +14,7 @@ const palette = {
   'tesouro_prefixado': 'bg-orange-400',
 }
 
-export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete }) {
+export default function AssetRow({ asset, assetValue, indices }) {
   const getNameTooltipContent = () => {
     if (asset.type === "cdb" || asset.type === "lci" || asset.type === "lca") {
       const rate = asset.rateType === "prefixado"
@@ -88,24 +88,6 @@ export default function AssetRow({ asset, assetValue, indices, onEdit, onDelete 
       </td>
       <td className="">
         {asset.maturityDate && asset.type != 'acao' && asset.type != 'etf' ? formatDate(asset.maturityDate) : "-"}
-      </td>
-      <td className="">
-        <button
-          onClick={() => onEdit(asset)}
-          className="hover:text-blue-400 transition-colors"
-          aria-label="Editar"
-        >
-          ✎
-        </button>
-      </td>
-      <td className="px-2">
-        <button
-          onClick={() => onDelete(asset.id)}
-          className="hover:text-red-500 transition-colors"
-          aria-label="Excluir"
-        >
-          ×
-        </button>
       </td>
     </tr >
   );

@@ -1,11 +1,7 @@
 import { Link } from "@/router";
 import { useEffect, useMemo, useState } from "react";
-import {
-  deleteStockTarget,
-  getAllAssets,
-  getAllStockTargets,
-  upsertStockTarget,
-} from "@/lib/db";
+import { deleteStockTarget, getAllStockTargets, upsertStockTarget } from "@/lib/db";
+import { fetchAssets } from "@/lib/assets";
 import { calculateStockRebalance } from "@/lib/rebalance";
 import { formatCurrency } from "@/lib/format";
 import { usePortfolioValue } from "@/hooks/usePortfolioValue";
@@ -43,7 +39,7 @@ export default function StocksPage() {
   const { assetValues, isLoading, error } = usePortfolioValue(assets);
 
   useEffect(() => {
-    Promise.all([getAllAssets(), getAllStockTargets()]).then(([nextAssets, targets]) => {
+    Promise.all([fetchAssets(), getAllStockTargets()]).then(([nextAssets, targets]) => {
       setAssets(nextAssets);
       setStockTargets(
         Object.fromEntries(

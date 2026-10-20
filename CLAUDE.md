@@ -10,7 +10,7 @@ bun run build  # Compile a single executable to dist/folio
 bun start      # Run the server in production mode (no HMR)
 ```
 
-Run the binary with `GEMINI_API_KEY=... ./dist/folio` (or a `.env` in the cwd). Keep port 3000: all user data lives in the browser (IndexedDB/localStorage), scoped to the origin.
+Run the binary with `FIRE_DATA=... ./dist/folio` (or a `.env` in the cwd). Assets are read-only, parsed from the `$FIRE_DATA` TSV by `src/api/assets.js` (format shared with `~/projects/fire`). Keep port 3000: stock targets live in IndexedDB, scoped to the origin.
 
 ## Architecture
 

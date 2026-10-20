@@ -11,8 +11,6 @@ export default function AssetViews({
   assets,
   assetValues = {},
   indices,
-  onDelete,
-  onEdit,
 }) {
   const [activeTab, setActiveTab] = useState("assets");
 
@@ -47,8 +45,6 @@ export default function AssetViews({
             assets={assets}
             assetValues={assetValues}
             indices={indices}
-            onDelete={onDelete}
-            onEdit={onEdit}
           />
         ) : (
           <AssetGroups assets={assets} assetValues={assetValues} />
