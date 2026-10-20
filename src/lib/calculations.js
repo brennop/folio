@@ -20,103 +20,60 @@ export function getIncomeTaxRate(days) {
   return 0.15;
 }
 
-export function calculateCdiLinked(principal, buyDate, cdiPercentage, annualCdi, isTaxFree = false) {
-  if (!buyDate) {
-    return { currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 };
+const noChange = (principal) => ({ currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 });
+
+// Compounds a BCB daily series ({ data: 'DD/MM/YYYY', valor: '% a.d.' }) from buyDate (YYYY-MM-DD) on.
+// The rate fixed on day D accrues D→D+1, so the buy day counts and today's (unpublished) rate doesn't.
+// `multiplier` scales each daily rate, e.g. 1.1 for 110% of CDI (B3 convention).
+export function accumulateDaily(series, buyDate, multiplier = 1) {
+  if (!Array.isArray(series) || series.length === 0) {
+    throw new Error('Daily index series is missing or empty');
   }
 
-  const days = getDaysHeld(buyDate);
-  if (days <= 0) return { currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 };
+  return series.reduce((factor, { data, valor }) => {
+    const [d, m, y] = data.split('/');
+    if (`${y}-${m}-${d}` < buyDate) return factor;
+    return factor * (1 + (parseFloat(valor) / 100) * multiplier);
+  }, 1);
+}
 
-  // Handle missing rate values
-  if (cdiPercentage === undefined || cdiPercentage === null || annualCdi === undefined || annualCdi === null) {
-    return { currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 };
-  }
-
-  // Convert CDI percentage (e.g., 110 for 110% CDI) to decimal
-  const rate = (cdiPercentage / 100) * (annualCdi / 100);
-
-  // Compound interest: P * (1 + r)^(days/365)
-  const grossValue = principal * Math.pow(1 + rate, days / 365);
+function applyTax(principal, grossValue, days, isTaxFree = false) {
   const grossProfit = grossValue - principal;
-
-  // Apply tax if not tax-free (LCI/LCA)
   const taxRate = isTaxFree ? 0 : getIncomeTaxRate(days);
-  const tax = grossProfit * taxRate;
-  const netProfit = grossProfit - tax;
-  const currentValue = principal + netProfit;
+  const netProfit = grossProfit - grossProfit * taxRate;
 
   return {
-    currentValue,
+    currentValue: principal + netProfit,
     grossValue,
     profit: netProfit,
     profitPercent: (netProfit / principal) * 100,
   };
 }
 
-export function calculateTesouroSelic(principal, buyDate, annualSelic) {
+export function calculateCdiLinked(principal, buyDate, cdiPercentage, cdiSeries, isTaxFree = false) {
+  if (!buyDate || cdiPercentage === undefined || cdiPercentage === null) return noChange(principal);
+
   const days = getDaysHeld(buyDate);
-  if (days <= 0) return { currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 };
+  if (days <= 0) return noChange(principal);
 
-  // Tesouro Selic follows SELIC rate
-  const rate = annualSelic / 100;
-  const grossValue = principal * Math.pow(1 + rate, days / 365);
-  const grossProfit = grossValue - principal;
-
-  const taxRate = getIncomeTaxRate(days);
-  const tax = grossProfit * taxRate;
-  const netProfit = grossProfit - tax;
-  const currentValue = principal + netProfit;
-
-  return {
-    currentValue,
-    grossValue,
-    profit: netProfit,
-    profitPercent: (netProfit / principal) * 100,
-  };
+  const grossValue = principal * accumulateDaily(cdiSeries, buyDate, cdiPercentage / 100);
+  return applyTax(principal, grossValue, days, isTaxFree);
 }
 
-export function calculateTesouroIpca(principal, buyDate, spread, annualIpca) {
+export function calculateTesouroSelic(principal, buyDate, selicSeries) {
   const days = getDaysHeld(buyDate);
-  if (days <= 0) return { currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 };
+  if (days <= 0) return noChange(principal);
 
-  // Tesouro IPCA+ = IPCA + spread (e.g., IPCA + 6%)
-  const rate = (annualIpca + spread) / 100;
-  const grossValue = principal * Math.pow(1 + rate, days / 365);
-  const grossProfit = grossValue - principal;
-
-  const taxRate = getIncomeTaxRate(days);
-  const tax = grossProfit * taxRate;
-  const netProfit = grossProfit - tax;
-  const currentValue = principal + netProfit;
-
-  return {
-    currentValue,
-    grossValue,
-    profit: netProfit,
-    profitPercent: (netProfit / principal) * 100,
-  };
+  const grossValue = principal * accumulateDaily(selicSeries, buyDate);
+  return applyTax(principal, grossValue, days);
 }
 
-export function calculateTesouroPrefixado(principal, buyDate, annualRate) {
+export function calculateTesouroPrefixado(principal, buyDate, annualRate, isTaxFree = false) {
   const days = getDaysHeld(buyDate);
-  if (days <= 0) return { currentValue: principal, grossValue: principal, profit: 0, profitPercent: 0 };
+  if (days <= 0) return noChange(principal);
 
-  const rate = annualRate / 100;
-  const grossValue = principal * Math.pow(1 + rate, days / 365);
-  const grossProfit = grossValue - principal;
-
-  const taxRate = getIncomeTaxRate(days);
-  const tax = grossProfit * taxRate;
-  const netProfit = grossProfit - tax;
-  const currentValue = principal + netProfit;
-
-  return {
-    currentValue,
-    grossValue,
-    profit: netProfit,
-    profitPercent: (netProfit / principal) * 100,
-  };
+  const grossValue = principal * Math.pow(1 + annualRate / 100, days / 365);
+  return applyTax(principal, grossValue, days, isTaxFree);
 }
 
 export function calculateEquity(quantity, avgPrice, currentPrice) {

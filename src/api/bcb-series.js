@@ -7,13 +7,13 @@ const BCB_BASE = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs'
 /**
  * BCB series codes
  *
- * CDI  12  – Taxa de juros - CDI / over / anualizada (% a.a., daily)
- * SELIC 11 – Taxa de juros - Selic acumulada no mês (% a.a., daily)
- * IPCA 433 – IPCA - variação mensal (%, monthly, date = MM/YYYY)
+ * CDI  12  – Taxa de juros - CDI (% a.d., daily)
+ * SELIC 11 – Taxa de juros - Selic (% a.d., daily)
+ * IPCA 433 – IPCA - variação mensal (%, monthly, date = 01/MM/YYYY)
  */
 const SERIES = {
-  cdi:   { code: 12,  label: 'CDI',   description: 'CDI over anualizada (% a.a.)' },
-  selic: { code: 11,  label: 'SELIC', description: 'SELIC acumulada no mês (% a.a.)' },
+  cdi:   { code: 12,  label: 'CDI',   description: 'CDI diária (% a.d.)' },
+  selic: { code: 11,  label: 'SELIC', description: 'SELIC diária (% a.d.)' },
   ipca:  { code: 433, label: 'IPCA',  description: 'IPCA variação mensal (%)' },
 }
 

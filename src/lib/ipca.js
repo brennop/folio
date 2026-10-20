@@ -76,7 +76,7 @@ function round(value, places = 2) {
  *
  * @param {Array<{ data: string; valor: string }>} params.ipca
  *   BCB série 433 array. Each entry has:
- *     data  – "MM/YYYY"
+ *     data  – "01/MM/YYYY"
  *     valor – monthly IPCA variation in percent (e.g. "0.42")
  *
  * @returns {{
@@ -112,39 +112,29 @@ export function calculateTesouroIpca({ principal, buyDate, spread, ipca }) {
 
   // ------------------------------------------------------------------
   // 1. Cumulative IPCA factor
-  //    Include months where the IPCA reference month (MM/YYYY) falls
+  //    Include months where the IPCA reference month (01/MM/YYYY) falls
   //    on or after the calendar month of buyDate.
   // ------------------------------------------------------------------
   const buyYear  = buyDateObj.getUTCFullYear()
   const buyMonth = buyDateObj.getUTCMonth() // 0-indexed
 
-  const ipcaFactor = ipca.reduce((acc, { data, valor }) => {
-    // data format: "MM/YYYY"
-    const [mm, yyyy] = data.split('/')
-    const entryYear  = parseInt(yyyy, 10)
-    const entryMonth = parseInt(mm, 10) - 1 // 0-indexed
-
-    const isOnOrAfterBuy =
-      entryYear > buyYear ||
-      (entryYear === buyYear && entryMonth >= buyMonth)
-
-    if (!isOnOrAfterBuy) return acc
-
-    const monthlyRate = parseFloat(valor)
-    if (isNaN(monthlyRate)) return acc
-
-    return acc * (1 + monthlyRate / 100)
-  }, 1)
-
-  const ipcaMonthsUsed = ipca.filter(({ data }) => {
-    const [mm, yyyy] = data.split('/')
-    const entryYear  = parseInt(yyyy, 10)
-    const entryMonth = parseInt(mm, 10) - 1
-    return (
-      entryYear > buyYear ||
-      (entryYear === buyYear && entryMonth >= buyMonth)
+  const months = ipca
+    .map(({ data, valor }) => {
+      // data format: "01/MM/YYYY"
+      const [, mm, yyyy] = data.split('/')
+      return {
+        year:  parseInt(yyyy, 10),
+        month: parseInt(mm, 10) - 1, // 0-indexed
+        rate:  parseFloat(valor),
+      }
+    })
+    .filter(({ year, month, rate }) =>
+      !isNaN(rate) &&
+      (year > buyYear || (year === buyYear && month >= buyMonth))
     )
-  }).length
+
+  const ipcaFactor = months.reduce((acc, { rate }) => acc * (1 + rate / 100), 1)
+  const ipcaMonthsUsed = months.length
 
   // ------------------------------------------------------------------
   // 2. Spread factor compounded over calendar days (actual/365)

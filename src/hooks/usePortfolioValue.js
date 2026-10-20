@@ -67,6 +67,9 @@ export function usePortfolioValue(assets) {
       const stockAssets = assets.filter((a) => a.type === 'acao' || a.type === 'etf');
       const tickers = stockAssets.map((a) => a.ticker);
 
+      // Index series must cover the oldest position, since we compound from each buy date
+      const startDate = assets.map((a) => a.buyDate).filter(Boolean).sort()[0] ?? '2024-01-01';
+
       // Fetch data in parallel
       const [quotes, indices, series] = await Promise.all([
         tickers.length > 0
@@ -77,7 +80,7 @@ export function usePortfolioValue(assets) {
           }, {})
           : Promise.resolve({}),
         fetchJson('/api/indices', undefined, null),
-        fetchJson('/api/bcb-series?startDate=2024-01-01', undefined, null),
+        fetchJson(`/api/bcb-series?startDate=${startDate}`, undefined, null),
       ]);
 
       let totalValue = 0;
@@ -130,7 +133,7 @@ export function usePortfolioValue(assets) {
                   asset.amount,
                   asset.buyDate,
                   asset.rate,
-                  indices.cdi.annual,
+                  series?.data?.cdi,
                   false
                 );
               }
@@ -138,17 +141,21 @@ export function usePortfolioValue(assets) {
 
             case 'lci':
             case 'lca':
-              result = calculateCdiLinked(
-                asset.amount,
-                asset.buyDate,
-                asset.rate,
-                indices.cdi.annual,
-                true // tax-free
-              );
+              if (asset.rateType === 'prefixado') {
+                result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate, true);
+              } else {
+                result = calculateCdiLinked(
+                  asset.amount,
+                  asset.buyDate,
+                  asset.rate,
+                  series?.data?.cdi,
+                  true // tax-free
+                );
+              }
               break;
 
             case 'tesouro_selic':
-              result = calculateTesouroSelic(asset.amount, asset.buyDate, indices.selic);
+              result = calculateTesouroSelic(asset.amount, asset.buyDate, series?.data?.selic);
               break;
 
             case 'tesouro_ipca':
