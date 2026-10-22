@@ -21,3 +21,12 @@ const server = Bun.serve({
 });
 
 console.log(`Folio running at ${server.url}`);
+
+// `bun --hot` re-runs this module on every save; globalThis survives reloads, so only open once
+if (!globalThis.browserOpened && !process.env.NO_OPEN) {
+  globalThis.browserOpened = true;
+  const cmd = { darwin: ['open'], win32: ['cmd', '/c', 'start', ''] }[process.platform] ?? ['xdg-open'];
+  try {
+    Bun.spawn([...cmd, server.url.href], { stdio: ['ignore', 'ignore', 'ignore'] });
+  } catch {} // no opener available (e.g. headless box); the URL is logged above
+}
