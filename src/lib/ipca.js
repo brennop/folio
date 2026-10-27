@@ -147,9 +147,11 @@ export function calculateTesouroIpca({ principal, buyDate, spread, ipca }) {
   // 3. Gross and net values
   // ------------------------------------------------------------------
   const grossValue  = principal * ipcaFactor * spreadFactor
-  const profit      = grossValue - principal
-  const tax         = profit * irRate(calendarDays)
+  const grossProfit = grossValue - principal
+  const tax         = grossProfit * irRate(calendarDays)
   const currentValue = grossValue - tax
+  // Net of IR, like the other fixed-income assets
+  const profit      = currentValue - principal
 
   return {
     currentValue:   round(currentValue, 2),

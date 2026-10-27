@@ -35,13 +35,9 @@ export default function PortfolioSummary({ totalValue, rendaFixaTotal, rendaVari
 
         <div className="text-right">
           <p className="text-zinc-500 text-sm mb-1">Rentabilidade</p>
-          {isLoading ? (
-            <div className="h-6 w-24 bg-zinc-800 animate-pulse" />
-          ) : (
-            <p className={`text-xl font-medium text-green-400`}>
-              {formatPercent(xirr * 100)} a.a.
-            </p>
-          )}
+          <p className={`text-xl font-medium text-green-400 ${isLoading ? 'animate-pulse opacity-60' : ''}`}>
+            {formatPercent(xirr * 100)} a.a.
+          </p>
         </div>
       </div>
 

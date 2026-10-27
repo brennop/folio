@@ -1,27 +1,28 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   calculateCdiLinked,
   calculateTesouroSelic,
   calculateTesouroPrefixado,
   calculateEquity,
 } from '@/lib/calculations';
-import { 
+import {
   calculateTesouroIpca,
 } from '@/lib/ipca';
 import { parseDate } from '@/lib/format';
 import {useLocalStorage} from './useLocalStorage';
 import xirr from "xirr";
 
-// Resolves to `fallback` instead of rejecting, so one failing upstream (e.g. BCB) doesn't break the whole portfolio
-async function fetchJson(url, options, fallback) {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`${url} returned ${res.status}`);
-    return await res.json();
-  } catch (error) {
-    console.error(`Failed to fetch ${url}:`, error);
-    return fallback;
-  }
+// /api/bcb-series answers right away and lists series it is still fetching from BCB in `pending`
+const SERIES_RETRY_MS = 5000;
+const SERIES_MAX_RETRIES = 24; // ~2 min
+
+const rendaVariavelTypes = ['acao', 'etf'];
+const rendaFixaTypes = ['cdb', 'lci', 'lca', 'tesouro_selic', 'tesouro_ipca', 'tesouro_prefixado'];
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+  return res.json();
 }
 
 function getInvested(asset) {
@@ -29,213 +30,179 @@ function getInvested(asset) {
   return asset.amount || 0;
 }
 
-export function usePortfolioValue(assets) {
-  const [state, setState] = useLocalStorage('v1', {
-    profit: 0,
-    profitPercent: 0,
-    assetValues: {},
-    rendaFixaTotal: 0,
-    rendaVariavelTotal: 0,
-    investedThisYear: 0,
-    indices: null,
-    isLoading: true,
-    error: null,
-  });
-
-  const calculateValues = useCallback(async () => {
-    if (!assets || assets.length === 0) {
-      setState({
-        totalValue: 0,
-        totalInvested: 0,
-        profit: 0,
-        profitPercent: 0,
-        assetValues: {},
-        rendaFixaTotal: 0,
-        rendaVariavelTotal: 0,
-        investedThisYear: 0,
-        indices: null,
-        isLoading: false,
-        error: null,
-      });
-      return;
+// Values one asset, or returns null while the market data it needs hasn't arrived
+function valueAsset(asset, quotes, series) {
+  switch (asset.type) {
+    case 'acao':
+    case 'etf': {
+      const quote = quotes?.[asset.ticker];
+      if (!quote || quote.error) return null;
+      return {
+        ...calculateEquity(asset.quantity, asset.avgPrice, quote.price),
+        dailyChange: quote.change ?? null,
+        pricePerShare: quote.price,
+      };
     }
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      // Get stock tickers
-      const stockAssets = assets.filter((a) => a.type === 'acao' || a.type === 'etf');
-      const tickers = stockAssets.map((a) => a.ticker);
-
-      // Index series must cover the oldest position, since we compound from each buy date
-      const startDate = assets.map((a) => a.buyDate).filter(Boolean).sort()[0] ?? '2024-01-01';
-
-      // Fetch data in parallel
-      const [quotes, indices, series] = await Promise.all([
-        tickers.length > 0
-          ? fetchJson('/api/quotes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tickers }),
-          }, {})
-          : Promise.resolve({}),
-        fetchJson('/api/indices', undefined, null),
-        fetchJson(`/api/bcb-series?startDate=${startDate}`, undefined, null),
-      ]);
-
-      let totalValue = 0;
-      let totalInvested = 0;
-      let rendaFixaTotal = 0;
-      let rendaVariavelTotal = 0;
-      let investedThisYear = 0;
-      const currentYear = new Date().getFullYear();
-      const assetValues = {};
-
-      const rendaVariavelTypes = ['acao', 'etf'];
-      const rendaFixaTypes = ['cdb', 'lci', 'lca', 'tesouro_selic', 'tesouro_ipca', 'tesouro_prefixado'];
-
-      for (const asset of assets) {
-        let result;
-        const invested = getInvested(asset);
-
-        // Fallback to invested amount when market data is unavailable
-        const unavailable = {
-          currentValue: invested,
-          invested,
-          profit: 0,
-          profitPercent: 0,
-          dailyChange: null,
-          pricePerShare: null,
-        };
-
-        try {
-          switch (asset.type) {
-            case 'acao':
-            case 'etf': {
-              const quote = quotes[asset.ticker];
-              if (quote && !quote.error) {
-                result = {
-                  ...calculateEquity(asset.quantity, asset.avgPrice, quote.price),
-                  dailyChange: quote.change ?? null,
-                  pricePerShare: quote.price,
-                };
-              } else {
-                result = unavailable;
-              }
-              break;
-            }
-
-            case 'cdb':
-              if (asset.rateType === 'prefixado') {
-                result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
-              } else {
-                result = calculateCdiLinked(
-                  asset.amount,
-                  asset.buyDate,
-                  asset.rate,
-                  series?.data?.cdi,
-                  false
-                );
-              }
-              break;
-
-            case 'lci':
-            case 'lca':
-              if (asset.rateType === 'prefixado') {
-                result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate, true);
-              } else {
-                result = calculateCdiLinked(
-                  asset.amount,
-                  asset.buyDate,
-                  asset.rate,
-                  series?.data?.cdi,
-                  true // tax-free
-                );
-              }
-              break;
-
-            case 'tesouro_selic':
-              result = calculateTesouroSelic(asset.amount, asset.buyDate, series?.data?.selic);
-              break;
-
-            case 'tesouro_ipca':
-              result = calculateTesouroIpca(
-                { principal: asset.amount,
-                  buyDate: asset.buyDate,
-                  spread: asset.rate || 6, // Default spread if not specified
-                  ipca: series?.data?.ipca
-                }
-              );
-              break;
-
-            case 'tesouro_prefixado':
-              result = calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
-              break;
-
-            default:
-              result = { currentValue: 0, profit: 0, profitPercent: 0 };
-          }
-        } catch (error) {
-          console.error(`Failed to calculate asset ${asset.id} (${asset.type}):`, error);
-          result = unavailable;
-        }
-
-        assetValues[asset.id] = {
-          ...result,
-          invested,
-          buyDate: asset.buyDate
-        };
-
-        const currentValue = result.currentValue || 0;
-        totalValue += currentValue;
-        totalInvested += invested;
-
-        if (rendaVariavelTypes.includes(asset.type)) {
-          rendaVariavelTotal += currentValue;
-        } else if (rendaFixaTypes.includes(asset.type)) {
-          rendaFixaTotal += currentValue;
-        }
-
-        if (asset.buyDate) {
-          const buyYear = parseDate(asset.buyDate).getFullYear();
-          if (buyYear === currentYear) {
-            investedThisYear += invested;
-          }
-        }
+    case 'cdb':
+    case 'lci':
+    case 'lca': {
+      const isTaxFree = asset.type !== 'cdb';
+      if (asset.rateType === 'prefixado') {
+        return calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate, isTaxFree);
       }
-
-      const profit = totalValue - totalInvested;
-      const profitPercent = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
-
-      setState({
-        totalValue,
-        totalInvested,
-        profit,
-        profitPercent,
-        assetValues,
-        rendaFixaTotal,
-        rendaVariavelTotal,
-        investedThisYear,
-        indices,
-        isLoading: false,
-        error: null,
-      });
-    } catch (error) {
-      console.error('Failed to calculate portfolio value:', error);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: error.message,
-      }));
+      if (!series?.cdi) return null;
+      return calculateCdiLinked(asset.amount, asset.buyDate, asset.rate, series.cdi, isTaxFree);
     }
-  }, [assets]);
+
+    case 'tesouro_selic':
+      if (!series?.selic) return null;
+      return calculateTesouroSelic(asset.amount, asset.buyDate, series.selic);
+
+    case 'tesouro_ipca':
+      if (!series?.ipca) return null;
+      return calculateTesouroIpca({
+        principal: asset.amount,
+        buyDate: asset.buyDate,
+        spread: asset.rate || 6, // Default spread if not specified
+        ipca: series.ipca,
+      });
+
+    case 'tesouro_prefixado':
+      return calculateTesouroPrefixado(asset.amount, asset.buyDate, asset.rate);
+
+    default:
+      return { currentValue: 0, profit: 0, profitPercent: 0 };
+  }
+}
+
+// Latest rates for display, from the series already fetched
+function latestIndices(series) {
+  const latest = (rows) => (rows?.length ? parseFloat(rows.at(-1).valor) : null);
+  const annualize = (daily) => (daily === null ? null : (Math.pow(1 + daily / 100, 252) - 1) * 100);
+  return {
+    cdi: { annual: annualize(latest(series?.cdi)) },
+    selic: annualize(latest(series?.selic)),
+    ipca: latest(series?.ipca),
+  };
+}
+
+export function usePortfolioValue(assets) {
+  const [quotes, setQuotes] = useState(null);
+  const [series, setSeries] = useState(null);
+  const [quotesLoading, setQuotesLoading] = useState(false);
+  const [seriesLoading, setSeriesLoading] = useState(false);
+  const [error, setError] = useState(null);
+  // Last computed value per asset, shown until fresh market data arrives
+  const [lastValues, setLastValues] = useLocalStorage('assetValues', {});
+
+  const tickers = useMemo(
+    () => [...new Set((assets ?? []).filter((a) => rendaVariavelTypes.includes(a.type)).map((a) => a.ticker))],
+    [assets],
+  );
+  // Index series must cover the oldest position, since we compound from each buy date
+  const startDate = useMemo(
+    () => (assets ?? []).map((a) => a.buyDate).filter(Boolean).sort()[0] ?? null,
+    [assets],
+  );
 
   useEffect(() => {
-    calculateValues();
-  }, [calculateValues]);
+    if (tickers.length === 0) return;
+    let cancelled = false;
+    setQuotesLoading(true);
+    fetchJson('/api/quotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tickers }),
+    })
+      .then((data) => !cancelled && setQuotes(data))
+      .catch((err) => {
+        console.error('Failed to fetch quotes:', err);
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => !cancelled && setQuotesLoading(false));
+    return () => { cancelled = true; };
+  }, [tickers.join(',')]);
+
+  useEffect(() => {
+    if (!startDate) return;
+    let cancelled = false;
+    let timer;
+    setSeriesLoading(true);
+
+    const load = async (attempt) => {
+      let pending = true;
+      try {
+        const res = await fetchJson(`/api/bcb-series?startDate=${startDate}`);
+        if (cancelled) return;
+        setSeries((prev) => ({ ...prev, ...res.data }));
+        pending = res.pending.length > 0;
+      } catch (err) {
+        console.error('Failed to fetch BCB series:', err);
+      }
+      if (cancelled) return;
+      if (pending && attempt < SERIES_MAX_RETRIES) {
+        timer = setTimeout(() => load(attempt + 1), SERIES_RETRY_MS);
+      } else {
+        setSeriesLoading(false);
+      }
+    };
+
+    load(0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [startDate]);
+
+  const fresh = useMemo(() => {
+    const values = {};
+    for (const asset of assets ?? []) {
+      try {
+        const result = valueAsset(asset, quotes, series);
+        if (result) values[asset.id] = { ...result, invested: getInvested(asset), buyDate: asset.buyDate };
+      } catch (err) {
+        console.error(`Failed to calculate asset ${asset.id} (${asset.type}):`, err);
+      }
+    }
+    return values;
+  }, [assets, quotes, series]);
+
+  useEffect(() => {
+    if (Object.keys(fresh).length > 0) setLastValues((prev) => ({ ...prev, ...fresh }));
+  }, [fresh]);
+
+  const summary = useMemo(() => {
+    const assetValues = {};
+    let totalValue = 0;
+    let totalInvested = 0;
+    let rendaFixaTotal = 0;
+    let rendaVariavelTotal = 0;
+    let investedThisYear = 0;
+    const currentYear = new Date().getFullYear();
+
+    for (const asset of assets ?? []) {
+      const invested = getInvested(asset);
+      // Fresh value, else the last known one (marked stale), else the invested amount
+      const value = fresh[asset.id]
+        ?? (lastValues[asset.id] && { ...lastValues[asset.id], stale: true })
+        ?? { currentValue: invested, profit: 0, profitPercent: 0, dailyChange: null, pricePerShare: null, stale: true };
+      assetValues[asset.id] = { ...value, invested, buyDate: asset.buyDate };
+
+      const currentValue = value.currentValue || 0;
+      totalValue += currentValue;
+      totalInvested += invested;
+      if (rendaVariavelTypes.includes(asset.type)) rendaVariavelTotal += currentValue;
+      else if (rendaFixaTypes.includes(asset.type)) rendaFixaTotal += currentValue;
+      if (asset.buyDate && parseDate(asset.buyDate).getFullYear() === currentYear) investedThisYear += invested;
+    }
+
+    const profit = totalValue - totalInvested;
+    const profitPercent = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
+    return { assetValues, totalValue, totalInvested, profit, profitPercent, rendaFixaTotal, rendaVariavelTotal, investedThisYear };
+  }, [assets, fresh, lastValues]);
+
+  const indices = useMemo(() => latestIndices(series), [series]);
 
   const xirrRate = useMemo(() => {
-    const transactions = Object.values(state.assetValues).flatMap(asset => {
+    const transactions = Object.values(summary.assetValues).flatMap(asset => {
       return [
         { amount: -asset.invested, when: parseDate(asset.buyDate) },
         { amount: asset.currentValue, when: new Date() },
@@ -244,8 +211,18 @@ export function usePortfolioValue(assets) {
 
     if (transactions.length < 2) return 0
 
-    return xirr(transactions)
-  }, [state.assetValues]);
+    try {
+      return xirr(transactions)
+    } catch {
+      return 0
+    }
+  }, [summary.assetValues]);
 
-  return { xirr: xirrRate, ...state };
+  return {
+    ...summary,
+    indices,
+    xirr: xirrRate,
+    isLoading: quotesLoading || seriesLoading,
+    error,
+  };
 }
