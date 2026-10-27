@@ -4,15 +4,19 @@
 //
 // BCB is slow and erratic (cold queries take 5-30s regardless of the range
 // size, and it sometimes answers with an HTML error page), and past rates never
-// change. So series are kept in a file cache, requests never wait on BCB, and
-// BCB is only asked for what is missing, in the background:
-//  - history before the earliest cached date; until it arrives the series is
-//    listed in `pending` and left out of `data`, and the client retries
-//  - entries after the latest cached one, at most every REFRESH_INTERVAL_MS
+// change. So series are cached in SQLite per calendar year, via cachified:
+//  - settled years never expire
+//  - the current year is refreshed in the background every REFRESH_INTERVAL_MS,
+//    serving the cached copy meanwhile (and when BCB fails)
+// Requests never wait on BCB: years that aren't cached within YEAR_WAIT_MS are
+// listed in `pending` and left out of `data`, and the client retries.
 
-import { mkdir } from 'node:fs/promises'
+import { Database } from 'bun:sqlite'
+import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { cachified } from '@epic-web/cachified'
+import { z } from 'zod'
 
 const BCB_BASE = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs'
 
@@ -30,12 +34,16 @@ const SERIES = {
 }
 
 const CACHE_PATH = process.env.FOLIO_CACHE
-  ?? join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'folio', 'bcb-series.json')
+  ?? join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'folio', 'bcb.sqlite')
 
+const DAY_MS = 24 * 60 * 60 * 1000
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 h
 const FETCH_TIMEOUT_MS = 60_000
-// BCB rejects daily-series queries spanning more than 10 years
-const MAX_RANGE_YEARS = 10
+const YEAR_WAIT_MS = 1_000
+// A year is settled once late publications are in (IPCA for December comes out in January)
+const SETTLE_DAYS = 60
+
+const rowsSchema = z.array(z.object({ data: z.string(), valor: z.string() }))
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -71,47 +79,72 @@ function addDays(isoDate, days) {
   return date.toISOString().slice(0, 10)
 }
 
-function addYears(isoDate, years) {
-  const date = new Date(`${isoDate}T00:00:00Z`)
-  date.setUTCFullYear(date.getUTCFullYear() + years)
-  return date.toISOString().slice(0, 10)
-}
-
 const today = () => new Date().toISOString().slice(0, 10)
 
 // ---------------------------------------------------------------------------
-// File cache
+// Cache
 // ---------------------------------------------------------------------------
 
+mkdirSync(dirname(CACHE_PATH), { recursive: true })
+const db = new Database(CACHE_PATH)
+db.run('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+const getEntry = db.query('SELECT value FROM cache WHERE key = ?')
+const setEntry = db.query('INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)')
+const deleteEntry = db.query('DELETE FROM cache WHERE key = ?')
+
 /**
- * Per series key: { from, checkedAt, entries }
- *  - from: earliest date BCB was queried from (history before it is unknown)
- *  - checkedAt: when the tail was last fetched
- *  - entries: BCB rows ({ data: 'DD/MM/YYYY', valor }) sorted by date
+ * cachified adapter storing entries (value + metadata) as JSON.
+ * Not cachified-adapter-sqlite: it rewrites `metadata.ttl` to ttl + swr, so
+ * entries never turn stale. Infinite ttls are serialised as null, which
+ * cachified reads as "forever", so swr must stay finite.
  *
- * @type {Promise<Record<string, { from: string; checkedAt: number; entries: { data: string; valor: string }[] }>> | null}
+ * @type {import('@epic-web/cachified').Cache}
  */
-let cachePromise = null
-
-function loadCache() {
-  cachePromise ??= Bun.file(CACHE_PATH).json().catch(() => ({}))
-  return cachePromise
+const cache = {
+  name: 'bcb-sqlite',
+  get: (key) => {
+    const row = getEntry.get(key)
+    return row ? JSON.parse(row.value) : null
+  },
+  set: (key, entry) => { setEntry.run(key, JSON.stringify(entry)) },
+  delete: (key) => { deleteEntry.run(key) },
 }
 
-async function saveCache(cache) {
-  try {
-    await mkdir(dirname(CACHE_PATH), { recursive: true })
-    await Bun.write(CACHE_PATH, JSON.stringify(cache))
-  } catch (err) {
-    console.error('[bcb-series] failed to write cache', err)
-  }
+/** BCB rows ({ data: 'DD/MM/YYYY', valor }) of `code` for one calendar year. */
+function fetchYear(code, year) {
+  const settled = year < Number(addDays(today(), -SETTLE_DAYS).slice(0, 4))
+  return cachified({
+    key: `bcb:${code}:${year}`,
+    cache,
+    checkValue: rowsSchema,
+    ttl: settled ? Infinity : REFRESH_INTERVAL_MS,
+    swr: 365 * DAY_MS,
+    fallbackToCache: true,
+    getFreshValue: async () => {
+      const until = (iso) => (iso < today() ? iso : today())
+      try {
+        return await fetchRange(code, `${year}-01-01`, until(`${year}-12-31`))
+      } catch (err) {
+        // BCB fails some ranges consistently (CDI 2024 answers {"erro":{}}),
+        // while halves of them work
+        if (`${year}-07-01` > today()) throw err
+        const halves = await Promise.all([
+          fetchRange(code, `${year}-01-01`, `${year}-06-30`),
+          fetchRange(code, `${year}-07-01`, until(`${year}-12-31`)),
+        ])
+        return halves.flat()
+      }
+    },
+  })
 }
 
-/** Merges rows into `entries`, deduplicating by date and keeping it sorted. */
-function merge(entries, rows) {
-  const byDate = new Map(entries.map((row) => [normaliseToIso(row.data), row]))
-  for (const row of rows) byDate.set(normaliseToIso(row.data), row)
-  return [...byDate].sort(([a], [b]) => a.localeCompare(b)).map(([, row]) => row)
+/** Resolves to `promise`'s value, or to undefined if it takes longer than `ms`. */
+function within(promise, ms) {
+  let timer
+  return Promise.race([
+    promise,
+    new Promise((resolve) => { timer = setTimeout(resolve, ms) }),
+  ]).finally(() => clearTimeout(timer))
 }
 
 // ---------------------------------------------------------------------------
@@ -139,73 +172,12 @@ async function fetchRange(code, startIso, endIso) {
     throw new Error(`BCB API returned ${res.headers.get('content-type')} for series ${code}`)
   }
 
-  return res.json()
-}
-
-/** Fetches [startIso, endIso], split into ranges BCB accepts. */
-async function fetchSeries(code, startIso, endIso) {
-  const rows = []
-  for (let from = startIso; from <= endIso; from = addDays(addYears(from, MAX_RANGE_YEARS), 1)) {
-    const to = addYears(from, MAX_RANGE_YEARS)
-    rows.push(...await fetchRange(code, from, to < endIso ? to : endIso))
+  // ...or with {"erro":{}}
+  const body = await res.json()
+  if (!Array.isArray(body)) {
+    throw new Error(`BCB API returned ${JSON.stringify(body).slice(0, 100)} for series ${code}`)
   }
-  return rows
-}
-
-// ---------------------------------------------------------------------------
-// Sync
-// ---------------------------------------------------------------------------
-
-/** @type {Map<string, Promise<void>>} in-flight syncs, so concurrent requests share them */
-const inFlight = new Map()
-
-function once(key, fn) {
-  if (!inFlight.has(key)) {
-    inFlight.set(key, fn().finally(() => inFlight.delete(key)))
-  }
-  return inFlight.get(key)
-}
-
-/** Fetches history from `startIso` up to what is cached (or up to today). */
-function backfill(name, startIso) {
-  return once(`backfill:${name}`, async () => {
-    const cache = await loadCache()
-    const entry = cache[name]
-    if (entry && entry.from <= startIso) return
-
-    const end = entry ? addDays(entry.from, -1) : today()
-    const rows = await fetchSeries(SERIES[name].code, startIso, end)
-
-    // Re-read: a tail refresh may have updated the entry during the fetch
-    const current = cache[name]
-    cache[name] = {
-      from: startIso,
-      checkedAt: current?.checkedAt ?? Date.now(),
-      entries: merge(current?.entries ?? [], rows),
-    }
-    await saveCache(cache)
-  })
-}
-
-/** Fetches entries newer than the latest cached one. */
-function refreshTail(name) {
-  return once(`tail:${name}`, async () => {
-    const cache = await loadCache()
-    const entry = cache[name]
-    if (!entry || Date.now() - entry.checkedAt < REFRESH_INTERVAL_MS) return
-
-    // Start after the latest entry, not after `checkedAt`: IPCA for month M
-    // is published in M+1 but dated 01/M
-    const last = entry.entries.at(-1)
-    const start = last ? addDays(normaliseToIso(last.data), 1) : entry.from
-    const rows = start <= today() ? await fetchSeries(SERIES[name].code, start, today()) : []
-
-    // Re-read: a backfill may have replaced the entry during the fetch
-    const current = cache[name]
-    current.entries = merge(current.entries, rows)
-    current.checkedAt = Date.now()
-    await saveCache(cache)
-  })
+  return body
 }
 
 // ---------------------------------------------------------------------------
@@ -232,24 +204,29 @@ export default async function handler(req) {
     return Response.json({ error: '`startDate` cannot be in the future.' }, { status: 400 })
   }
 
-  const cache = await loadCache()
+  const startYear = Number(isoDate.slice(0, 4))
+  const years = Array.from({ length: Number(today().slice(0, 4)) - startYear + 1 }, (_, i) => startYear + i)
   const data = {}
   const pending = []
 
-  for (const [name, series] of Object.entries(SERIES)) {
-    const entry = cache[name]
-    if (!entry || entry.from > isoDate) {
-      pending.push(name)
-      backfill(name, isoDate).catch((err) => console.error(`[bcb-series] ${name} backfill failed:`, err.message))
-      continue
-    }
+  await Promise.all(Object.entries(SERIES).map(async ([name, series]) => {
+    const rows = await Promise.all(years.map((year) => {
+      // Keeps fetching (and filling the cache) after the wait runs out
+      const fetching = fetchYear(series.code, year).catch((err) => {
+        console.error(`[bcb-series] ${name} ${year} failed:`, err.message)
+      })
+      return within(fetching, YEAR_WAIT_MS)
+    }))
 
-    refreshTail(name).catch((err) => console.error(`[bcb-series] ${name} refresh failed:`, err.message))
+    if (rows.some((r) => r === undefined)) {
+      pending.push(name)
+      return
+    }
 
     // Monthly entries are dated on the 1st, so keep the start date's month
     const cutoff = series.monthly ? `${isoDate.slice(0, 8)}01` : isoDate
-    data[name] = entry.entries.filter((row) => normaliseToIso(row.data) >= cutoff)
-  }
+    data[name] = rows.flat().filter((row) => normaliseToIso(row.data) >= cutoff)
+  }))
 
   const payload = {
     meta: {

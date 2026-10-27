@@ -8,6 +8,7 @@
     "start": "NODE_ENV=production bun src/server.js"
   },
   "dependencies": {
+    "@epic-web/cachified": "^5.6.3",
     "@floating-ui/react": "^0.27.17",
     "@fontsource/geist-mono": "^5.3.0",
     "@number-flow/react": "^0.6.0",
